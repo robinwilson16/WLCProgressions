@@ -1,0 +1,101 @@
+﻿@page
+@model WLCProgressions.Pages.CourseGroups.EditModel
+
+@{
+    ViewData["Title"] = "Edit";
+}
+
+<h1>Edit</h1>
+
+<h4>CourseGroup</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.AcademicYear" class="control-label"></label>
+                <input asp-for="CourseGroup.AcademicYear" class="form-control" />
+                <span asp-validation-for="CourseGroup.AcademicYear" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.SiteCode" class="control-label"></label>
+                <input asp-for="CourseGroup.SiteCode" class="form-control" />
+                <span asp-validation-for="CourseGroup.SiteCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.SiteName" class="control-label"></label>
+                <input asp-for="CourseGroup.SiteName" class="form-control" />
+                <span asp-validation-for="CourseGroup.SiteName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.FacCode" class="control-label"></label>
+                <input asp-for="CourseGroup.FacCode" class="form-control" />
+                <span asp-validation-for="CourseGroup.FacCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.FacName" class="control-label"></label>
+                <input asp-for="CourseGroup.FacName" class="form-control" />
+                <span asp-validation-for="CourseGroup.FacName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.TeamCode" class="control-label"></label>
+                <input asp-for="CourseGroup.TeamCode" class="form-control" />
+                <span asp-validation-for="CourseGroup.TeamCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.TeamName" class="control-label"></label>
+                <input asp-for="CourseGroup.TeamName" class="form-control" />
+                <span asp-validation-for="CourseGroup.TeamName" class="text-danger"></span>
+            </div>
+            <input type="hidden" asp-for="CourseGroup.CourseID" />
+            <div class="form-group">
+                <label asp-for="CourseGroup.CourseCode" class="control-label"></label>
+                <input asp-for="CourseGroup.CourseCode" class="form-control" />
+                <span asp-validation-for="CourseGroup.CourseCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.CourseTitle" class="control-label"></label>
+                <input asp-for="CourseGroup.CourseTitle" class="form-control" />
+                <span asp-validation-for="CourseGroup.CourseTitle" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.AimCode" class="control-label"></label>
+                <input asp-for="CourseGroup.AimCode" class="form-control" />
+                <span asp-validation-for="CourseGroup.AimCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.AimTitle" class="control-label"></label>
+                <input asp-for="CourseGroup.AimTitle" class="form-control" />
+                <span asp-validation-for="CourseGroup.AimTitle" class="text-danger"></span>
+            </div>
+            <input type="hidden" asp-for="CourseGroup.GroupID" />
+            <div class="form-group">
+                <label asp-for="CourseGroup.GroupCode" class="control-label"></label>
+                <input asp-for="CourseGroup.GroupCode" class="form-control" />
+                <span asp-validation-for="CourseGroup.GroupCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.GroupName" class="control-label"></label>
+                <input asp-for="CourseGroup.GroupName" class="form-control" />
+                <span asp-validation-for="CourseGroup.GroupName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CourseGroup.Enrolments" class="control-label"></label>
+                <input asp-for="CourseGroup.Enrolments" class="form-control" />
+                <span asp-validation-for="CourseGroup.Enrolments" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-page="./Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

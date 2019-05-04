@@ -1,0 +1,107 @@
+﻿@page
+@model WLCProgressions.Pages.CourseGroups.DeleteModel
+
+@{
+    ViewData["Title"] = "Delete";
+}
+
+<h1>Delete</h1>
+
+<h3>Are you sure you want to delete this?</h3>
+<div>
+    <h4>CourseGroup</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.AcademicYear)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.AcademicYear)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.SiteCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.SiteCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.SiteName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.SiteName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.FacCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.FacCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.FacName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.FacName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.TeamCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.TeamCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.TeamName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.TeamName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.CourseCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.CourseCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.CourseTitle)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.CourseTitle)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.AimCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.AimCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.AimTitle)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.AimTitle)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.GroupCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.GroupCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.GroupName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.GroupName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CourseGroup.Enrolments)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CourseGroup.Enrolments)
+        </dd>
+    </dl>
+    
+    <form method="post">
+        <input type="hidden" asp-for="CourseGroup.CourseID" />
+        <input type="hidden" asp-for="CourseGroup.GroupID" />
+        <input type="submit" value="Delete" class="btn btn-danger" /> |
+        <a asp-page="./Index">Back to List</a>
+    </form>
+</div>

@@ -1,0 +1,137 @@
+﻿@page
+@model IndexModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+@{
+    ViewData["Title"] = "Home page";
+}
+
+@if (@Model.SystemID != "ProSolution")
+{
+    <div class="container Spacer">
+        <div class="row">
+            <div class="col-md">
+                <div class="alert alert-warning text-center" role="alert">
+                    <i class="fas fa-database"></i> ProSolution <strong>@Model.SystemID</strong> System
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (@Model.AcademicYear != @Model.DefaultAcademicYear)
+{
+    <div class="container Spacer">
+        <div class="row">
+            <div class="col-md">
+                <div class="alert alert-warning text-center" role="alert">
+                    <i class="far fa-calendar-alt"></i> Year selected is <strong>@Model.AcademicYear</strong> when default year is <strong>@(Model.DefaultAcademicYear)</strong>. Please check this is intentional.
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md">
+            <h2>WLC Progressions System</h2>
+            <p>
+                Please search for the course you wish to progress learners from then select the learners to progress:
+            </p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md">
+            <div class="form-group row">
+                <label for="CourseSearchFromBox" class="col-sm-3 col-form-label">Course Progressing From:</label>
+                <div class="col-sm-5">
+                    <input type="text" class="form-control CourseSearchBox" id="CourseSearchFromBox" aria-describedby="CourseSearchFromBoxHelp" placeholder="Enter course code/title" aria-label="SearchFromBox">
+                    <small id="CourseSearchFromBoxHelp" class="form-text text-muted">The search will occur automatically once you enter sufficient characters</small>
+                </div>
+                <label for="CourseSearchFromBox" class="col-sm-1 col-form-label">in</label>
+                <div class="col-sm-2">
+                    <form method="get" id="ChangeAcademicYearID">
+                        <select name="academicYear" class="form-control custom-select AcademicYearID" asp-items="ViewBag.AcademicYearID" id="AcademicYearID"></select>
+                        <input type="hidden" name="system" id="SystemID" value="@Model.SystemID" />
+                    </form>
+                </div>
+                <div class="col-sm-1">
+                    to @Model.ProgressionYear
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md SearchArea" id="SearchFromArea">
+            <div class="alert alert-secondary text-center" role="alert">
+                No results...
+            </div>
+        </div>
+    </div>
+
+    <div class="row Spacer">
+        <div class="alert alert-secondary col" role="alert" id="CoursePageFromNav">
+
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md StudentArea" id="StudentArea">
+            <div class="alert alert-secondary text-center" role="alert">
+                Please search for course above...
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md">
+            <div class="alert alert-primary" role="alert">
+                <div class="row">
+                    <div class="col-md-3">
+                        Select all learners
+                        <label class="switch GetNotifications">
+                            <input type="checkbox" class="CheckAllStudents" disabled>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="col-md-9 text-right">
+                        <button type="button" class="btn btn-primary disabled ProgressLearnerButton ProgressWithinTeam"><i class="fas fa-redo-alt"></i> Progress Within Dept...</button>
+                        <button type="button" class="btn btn-secondary disabled ProgressLearnerButton ProgressAnotherTeam"><i class="fas fa-share"></i> Progress To Another Dept...</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (@Model.SystemID != "ProSolution")
+{
+    <div class="container Spacer">
+        <div class="row">
+            <div class="col-md">
+                <div class="alert alert-warning text-center" role="alert">
+                    <i class="fas fa-database"></i> ProSolution <strong>@Model.SystemID</strong> System
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (@Model.AcademicYear != @Model.DefaultAcademicYear)
+{
+    <div class="container Spacer">
+        <div class="row">
+            <div class="col-md">
+                <div class="alert alert-warning text-center" role="alert">
+                    <i class="far fa-calendar-alt"></i> Year selected is <strong>@Model.AcademicYear</strong> when default year is <strong>@(Model.DefaultAcademicYear)</strong>. Please check this is intentional.
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modals -->
+<partial name="_ModalsPartial" model="Model" />
+
+<partial name="_InputIDsPartial" model="Model" />
+<input id="AntiForgeryTokenID" name="__RequestVerificationToken" type="hidden" value=" @Xsrf.GetAndStoreTokens(this.HttpContext).RequestToken" />

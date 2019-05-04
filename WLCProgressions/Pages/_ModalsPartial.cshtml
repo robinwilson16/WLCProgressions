@@ -1,0 +1,91 @@
+﻿<div class="modal fade" id="ProgressionModal" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-labelledby="ProgressionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ProgressionModalLabel"><i class="fas fa-share"></i> <span class="title">Progression to a New Course</span></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md">
+                            <h2>Progressing <span id="NumLearnersSelected">0</span> learners to another course <span id="DeptIndicator"></span></h2>
+                            <p>
+                                Please search for the course you wish to progress these learners to:
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md">
+                            <form>
+                                <div class="form-group row">
+                                    <label for="CourseSearchToBox" class="col-sm-4 col-form-label">Course Progressing To:</label>
+                                    <div class="col-sm-8">
+                                        <input type="text" class="form-control CourseSearchBox" id="CourseSearchToBox" aria-describedby="CourseSearchToBoxHelp" placeholder="Enter course code/title" aria-label="SearchToBox">
+                                        <small id="CourseSearchToBoxHelp" class="form-text text-muted">The search will occur automatically once you enter sufficient characters</small>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md SearchArea" id="SearchToArea">
+                            <div class="alert alert-secondary text-center" role="alert">
+                                No results...
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row Spacer">
+                        <div class="alert alert-secondary col" role="alert" id="CoursePageToNav">
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="container d-none alert alert-success SelectedCourseDetails">
+                    <h5 class="alert-heading">Progress learners to:</h5>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md" id="FacultyNameID">
+                            Faculty
+                        </div>
+                        <div class="col-md" id="TeamNameID">
+                            Team
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md font-weight-bold" id="CourseCodeID">
+                            Course Code
+                        </div>
+                        <div class="col-md" id="CourseTitleID">
+                            Course Title
+                        </div>
+                    </div>
+                </div>
+                <div class="container d-none alert alert-primary SelectedCourseDetails">
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label d-none OfferTypeLabelCol">Offer Type</label>
+                        <div class="col-sm-4 d-none OfferTypeSelectListCol">
+                            <select class="form-control custom-select OfferTypeSelectList" asp-items="ViewBag.OfferID" id="OfferTypeSelectList">
+                                <option value="" hidden disabled selected>Please select...</option>
+                            </select>
+                        </div>
+                        <label class="col-sm-2 col-form-label d-none OfferConditionLabelCol">Condition</label>
+                        <div class="col-sm-4 d-none OfferConditionSelectListCol">
+                            <select class="form-control custom-select OfferConditionSelectList" asp-items="ViewBag.ConditionID" id="OfferConditionSelectList">
+                                <option value="" hidden disabled selected>Please select...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success SaveProgressionButton"><i class="fas fa-book"></i> Progress These Learners<span id="ProgressToCourseButtonTextID"></span></button>
+                    <button type="button" class="btn btn-danger CancelProgressionButton" data-dismiss="modal"><i class="fas fa-sign-out-alt"></i> Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

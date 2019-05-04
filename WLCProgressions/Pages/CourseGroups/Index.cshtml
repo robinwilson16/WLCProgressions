@@ -1,0 +1,121 @@
+﻿@page  "{search?}"
+@model WLCProgressions.Pages.CourseGroups.IndexModel
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-page="Create">Create New</a>
+</p>
+<div class="container">
+    <div class="row">
+        <div class="col-md" id="SearchResults">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].AcademicYear)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].SiteCode)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].SiteName)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].FacCode)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].FacName)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].TeamCode)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].TeamName)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].CourseCode)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].CourseTitle)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].AimCode)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].AimTitle)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].GroupCode)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].GroupName)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.CourseGroup[0].Enrolments)
+                        </th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.CourseGroup)
+                    {
+                        <tr>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.AcademicYear)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.SiteCode)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.SiteName)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.FacCode)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.FacName)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.TeamCode)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.TeamName)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.CourseCode)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.CourseTitle)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.AimCode)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.AimTitle)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.GroupCode)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.GroupName)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.Enrolments)
+                            </td>
+                            <td>
+                                @Html.ActionLink("Edit", "Edit", new { /* id=item.PrimaryKey */ }) |
+                                @Html.ActionLink("Details", "Details", new { /* id=item.PrimaryKey */ }) |
+                                @Html.ActionLink("Delete", "Delete", new { /* id=item.PrimaryKey */ })
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

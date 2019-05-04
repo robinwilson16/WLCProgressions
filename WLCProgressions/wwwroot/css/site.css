@@ -1,0 +1,34 @@
+﻿nav .NavLogo {
+    margin-top: -10px;
+    margin-bottom: -10px;
+    background-color: #ffffff;
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.Spacer {
+    margin-top: 20px;
+}
+
+.SearchArea {
+    border: 2px solid #cccccc;
+    border-radius: 6px;
+    padding-top: 10px;
+    height: 200px;
+    overflow-y: scroll;
+    font-size: 0.8em;
+}
+
+.StudentArea {
+    border: 2px solid #cccccc;
+    border-radius: 6px;
+    padding-top: 10px;
+    height: 300px;
+    overflow-y: scroll;
+    font-size: 0.8em;
+}
+
+.DestinationOptionsSelectList {
+    font-size: 0.94em;
+    max-width: 200px;
+}
