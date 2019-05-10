@@ -1,0 +1,249 @@
+CREATE PROCEDURE [dbo].[SPR_PRG_UpdateDestination]
+	@System NVARCHAR(50),
+    @AcademicYear NVARCHAR(5),
+    @StudentRef NVARCHAR(50),
+	@Destination INT,
+    @Username NVARCHAR(200)
+AS
+BEGIN
+	SET NOCOUNT ON;
+    -- DECLARE @StudentRef VARCHAR(50) = '11000000'
+    -- DECLARE @Destination int = 27
+
+    DECLARE @SQLString NVARCHAR(MAX);
+    DECLARE @SQLParams NVARCHAR(MAX);
+
+    DECLARE @DestinationID INT;
+    DECLARE @DestinationCode NVARCHAR(50) = '';
+    DECLARE @DestinationDescription NVARCHAR(255) = '';
+    DECLARE @ErrorMsg NVARCHAR(255) = '';
+
+    --Default destination to 44 if not set (Other FE* (Full-Time))
+    -- IF @Destination IS NULL
+    --     SET @Destination = 44
+
+    IF @Destination IS NOT NULL
+        BEGIN
+            SET @SQLString = 
+                N'SELECT
+                    @DestinationIDOUT = DES.LocalDestinationID,
+                    @DestinationCodeOUT = RTRIM ( DES.Code ),
+                    @DestinationDescriptionOUT = DES.Description
+                FROM ' + @System + '.dbo.LocalDestination DES
+                WHERE
+                    DES.Enabled = 1
+                    AND DES.LocalDestinationID = @Destination';
+
+            SET @SQLParams = 
+                N'@Destination INT,
+                @DestinationIDOUT INT OUTPUT,
+                @DestinationCodeOUT NVARCHAR(50) OUTPUT,
+                @DestinationDescriptionOUT NVARCHAR(255) OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @Destination = @Destination, 
+                @DestinationIDOUT = @DestinationID OUTPUT, 
+                @DestinationCodeOUT = @DestinationCode OUTPUT,
+                @DestinationDescriptionOUT = @DestinationDescription OUTPUT;
+        END
+
+    IF @@ROWCOUNT <> 1 AND @Destination IS NOT NULL
+        BEGIN
+            SET @ErrorMsg = CAST ( @Destination AS VARCHAR(10) ) + ' is not a valid destination code in ' + @System + ' system';
+            RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+        END
+    ELSE
+        BEGIN
+            -- DECLARE @StudentRef VARCHAR(50) = '11000000'
+            -- DECLARE @Destination INT = 27
+            -- DECLARE @Username VARCHAR(100) = 'r.wilson'
+            -- DECLARE @DestinationCode VARCHAR(50) = '';
+            -- DECLARE @DestinationDescription VARCHAR(255) = '';
+            
+            SET @SQLString = 
+                N'INSERT INTO ' + @System + '.dbo._CCC_AuditTrail 
+                (
+                    TableName,
+                    WhereClause,
+                    RowDescription,
+                    ChangeInfo,
+                    ChangeType,
+                    ModifiedBy,
+                    ModifiedOn
+                )
+                SELECT
+                    TableName = ''StudentDetail'',
+                    WhereClause = ''[StudentDetailID] = '' + CAST ( SD.StudentDetailID AS VARCHAR(50) ),
+                    RowDescription = SD.Surname + '' , '' + SD.FirstForename + '' ('' + RTRIM ( SD.RefNo ) + ''), '' + CAST ( CAST ( FLOOR ( DATEDIFF ( DAY, COALESCE ( SD.DateOfBirth, CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ), CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ) / 365.23076923074 ) AS int ) AS VARCHAR(50) ) + '', '' + SD.AcademicYearID,
+                    ChangeInfo = ''Record Updated: LocalDestinationID: Changed from '''''' + COALESCE ( CAST ( SD.LocalDestinationID AS VARCHAR(50) ), '''' ) + '''''' ('' + RTRIM ( DES.Code ) + '' - '' + DES.Description + '') to '''''' + CAST ( @Destination AS VARCHAR(50) ) + '''''' ('' + @DestinationCode + '' - '' + @DestinationDescription + '''''')'',
+                    ChangeType = 2,
+                    ModifiedBy = @Username,
+                    ModifiedOn = GETDATE()
+                FROM ' + @System + '.dbo.StudentDetail SD
+                LEFT JOIN ' + @System + '.dbo.LocalDestination DES
+                    ON DES.LocalDestinationID = SD.LocalDestinationID
+                WHERE
+                    SD.AcademicYearID = @AcademicYear
+                    AND SD.RefNo = @StudentRef';
+
+            SET @SQLParams = 
+                N'@System NVARCHAR(50),
+                @AcademicYear NVARCHAR(5),
+                @StudentRef NVARCHAR(50),
+                @Destination INT,
+                @DestinationCode NVARCHAR(50),
+                @DestinationDescription NVARCHAR(255),
+                @Username NVARCHAR(200)';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @System = @System, 
+                @AcademicYear = @AcademicYear, 
+                @StudentRef = @StudentRef, 
+                @Destination = @Destination,
+                @DestinationCode = @DestinationCode,
+                @DestinationDescription = @DestinationDescription,
+                @Username = @Username;
+
+            IF @@ROWCOUNT <> 1
+                BEGIN
+                    SET @ErrorMsg = CAST ( @Destination AS VARCHAR(10) ) + ' is not a valid destination code in ' + @System + ' system';
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END
+            ELSE
+                BEGIN
+                    --Update local destination (in previous year Student Detail Record)
+                    SET @SQLString = 
+                        N'UPDATE SD
+                        SET
+                            SD.LocalDestinationID = @Destination
+                        FROM ' + @System + '.dbo.StudentDetail SD
+                        WHERE
+                            SD.AcademicYearID = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) - 1 AS VARCHAR(2) ) + ''/'' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) - 1 AS VARCHAR(2) )
+                            AND SD.RefNo = @StudentRef';
+
+                    SET @SQLParams = 
+                        N'@System NVARCHAR(50),
+                        @AcademicYear NVARCHAR(5),
+                        @StudentRef NVARCHAR(50),
+                        @Destination INT';
+
+                    EXECUTE sp_executesql 
+                        @SQLString, 
+                        @SQLParams, 
+                        @System = @System, 
+                        @AcademicYear = @AcademicYear, 
+                        @StudentRef = @StudentRef, 
+                        @Destination = @Destination;
+                    
+                    --Delete any existing ILR destinations with today's date (i.e. if person has corrected their choice)
+                    SET @SQLString = 
+                        N'DELETE OC
+                        FROM ' + @System + '.dbo.StudentDetail SD
+                        INNER JOIN ' + @System + '.dbo.StudentOutcome OC
+                            ON OC.StudentID = SD.StudentID
+                            AND OC.ReturnYearID = SD.AcademicYearID
+                        WHERE
+                            SD.RefNo = @StudentRef
+                            AND SD.AcademicYearID = @AcademicYear
+                            AND CAST ( OC.CollectionDate AS DATE ) = CAST ( GETDATE() AS DATE )';
+
+                    SET @SQLParams = 
+                        N'@System NVARCHAR(50),
+                        @AcademicYear NVARCHAR(5),
+                        @StudentRef NVARCHAR(50)';
+
+                    EXECUTE sp_executesql 
+                        @SQLString, 
+                        @SQLParams, 
+                        @System = @System, 
+                        @AcademicYear = @AcademicYear, 
+                        @StudentRef = @StudentRef;
+
+                    --End existing ILR destination
+
+                    SET @SQLString = 
+                        N'UPDATE OC
+                        SET
+                            OC.EndDate = DATEADD( DAY, -1, GETDATE() ), --Yesterday
+                            OC.LastModifiedBy = @Username,
+                            OC.LastModifiedDate = GETDATE()
+                        FROM ' + @System + '.dbo.StudentDetail SD
+                        INNER JOIN ' + @System + '.dbo.StudentOutcome OC
+                            ON OC.StudentID = SD.StudentID
+                            AND OC.ReturnYearID = SD.AcademicYearID
+                        WHERE
+                            SD.RefNo = @StudentRef
+                            AND SD.AcademicYearID = @AcademicYear
+                            AND OC.EndDate IS NULL --Is not already ended';
+
+                    SET @SQLParams = 
+                        N'@System NVARCHAR(50),
+                        @AcademicYear NVARCHAR(5),
+                        @StudentRef NVARCHAR(50),
+                        @Username NVARCHAR(200)';
+
+                    EXECUTE sp_executesql 
+                        @SQLString, 
+                        @SQLParams, 
+                        @System = @System, 
+                        @AcademicYear = @AcademicYear, 
+                        @StudentRef = @StudentRef, 
+                        @Username = @Username;
+
+                    IF @Destination IS NOT NULL
+                    BEGIN
+                        --Insert New ILR Destination (if not blank)
+
+                        SET @SQLString = 
+                            N'INSERT INTO ' + @System + '.dbo.StudentOutcome
+                            (
+                                LocalDestinationID,
+                                StartDate,
+                                CollectionDate,
+                                IncludeInILR,
+                                StudentID,
+                                ReturnYearID,
+                                IsActualDestination,
+                                CreatedBy,
+                                CreatedDate
+                            )
+                            SELECT
+                                LocalDestinationID = @Destination,
+                                StartDate = GETDATE(),
+                                CollectionDate = GETDATE(),
+                                IncludeInILR = 1,
+                                StudentID = SD.StudentID,
+                                ReturnYearID = @AcademicYear,
+                                IsActualDestination = 1,
+                                CreatedBy = @Username,
+                                CreatedDate = GETDATE()
+                            FROM ' + @System + '.dbo.StudentDetail SD
+                            WHERE
+                                SD.RefNo = @StudentRef
+                                AND SD.AcademicYearID = @AcademicYear';
+
+                        SET @SQLParams = 
+                            N'@System NVARCHAR(50),
+                            @AcademicYear NVARCHAR(5),
+                            @StudentRef NVARCHAR(50),
+                            @Destination INT,
+                            @Username NVARCHAR(200)';
+
+                        EXECUTE sp_executesql 
+                            @SQLString, 
+                            @SQLParams, 
+                            @System = @System, 
+                            @AcademicYear = @AcademicYear, 
+                            @StudentRef = @StudentRef, 
+                            @Destination = @Destination,
+                            @Username = @Username;
+                    END
+
+                    PRINT 'Updated student ' + @StudentRef + ' to destination code ' + CAST ( @Destination AS VARCHAR(10) ) + ' in ' + @System + ' system';
+                END
+        END
+END

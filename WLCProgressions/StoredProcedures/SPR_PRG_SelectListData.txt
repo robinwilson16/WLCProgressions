@@ -1,0 +1,70 @@
+CREATE PROCEDURE [dbo].[SPR_PRG_SelectListData]
+	@System NVARCHAR(20),
+    @AcademicYear NVARCHAR(5),
+    @Domain NVARCHAR(255)
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    DECLARE @SQLString NVARCHAR(MAX);
+    DECLARE @SQLParams NVARCHAR(MAX);
+
+    IF @Domain = 'ACADEMIC_YEAR'
+		SET @SQLString = 
+        N'SELECT
+            Code = AY.AcademicYearID,
+            Description = AY.AcademicYearID
+        FROM ' + @System + '.dbo.AcademicYear AY
+        WHERE
+            AY.Enabled = 1
+        ORDER BY
+            AY.AcademicYearID';
+	ELSE IF @Domain = 'APPLICATION_CONDITION'
+		SET @SQLString = 
+        N'SELECT
+			Code = CAST ( APPC.ApplicationOfferConditionID AS VARCHAR(10) ),
+			Description = APPC.Description
+		FROM ' + @System + '.dbo.ApplicationOfferCondition APPC
+		WHERE
+			APPC.Enabled = 1
+		ORDER BY
+			APPC.[Order],
+			APPC.Description';
+    ELSE IF @Domain = 'APPLICATION_OFFER'
+		SET @SQLString = 
+        N'SELECT
+            Code = CAST ( APPO.ApplicationOfferID AS VARCHAR(10) ),
+            Description = APPO.Description
+        FROM ' + @System + '.dbo.ApplicationOffer APPO
+        WHERE
+            APPO.Enabled = 1
+            AND APPO.OfferYes = 1
+        ORDER BY
+            APPO.Description';
+	ELSE IF @Domain = 'DESTINATION'
+        SET @SQLString = 
+        N'SELECT
+			Code = CAST ( DES.LocalDestinationID AS VARCHAR(10) ),
+			Description = DES.Description
+		FROM ' + @System + '.dbo.LocalDestination DES
+		WHERE
+			DES.Enabled = 1
+			AND COALESCE ( DES.MinAcademicYearID, @AcademicYear ) <= @AcademicYear
+			AND COALESCE ( DES.MaxAcademicYearID, @AcademicYear ) >= @AcademicYear
+		ORDER BY
+			DES.Description,
+			DES.Code';
+	ELSE
+        SET @SQLString = 
+        N'SELECT
+			Code = '''',
+			Description = ''-- ERROR --''';
+
+    SET @SQLParams = 
+        N'@AcademicYear NVARCHAR(5)';
+        
+    EXECUTE sp_executesql 
+        @SQLString, 
+        @SQLParams,  
+        @AcademicYear = @AcademicYear;
+END

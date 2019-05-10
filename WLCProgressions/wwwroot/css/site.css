@@ -32,3 +32,63 @@
     font-size: 0.94em;
     max-width: 200px;
 }
+
+.RiskIndicator {
+    width: 20px;
+    height: 20px;
+}
+
+.RiskIndicator.Green {
+    background-color: #4cff00;
+}
+
+.RiskIndicator.Orange {
+    background-color: #ffd800;
+}
+
+.RiskIndicator.Red {
+    background-color: #ff0000;
+}
+
+.RiskIndicator.Blue {
+    background-color: #0000fe;
+}
+
+.AttendPercent {
+    width: 80px;
+    height: 20px;
+    border: 1px solid #cccccc;
+    position: relative;
+}
+
+.AttendPercent.Excellent .AttendBar {
+    background-color: #4cff00;
+    height: 17px;
+}
+
+.AttendPercent.Good .AttendBar {
+    background-color: #4caf50;
+    height: 17px;
+}
+
+.AttendPercent.Poor .AttendBar {
+    background-color: #F39C12;
+    height: 17px;
+}
+
+.AttendPercent.VeryPoor .AttendBar {
+    background-color: #C0392B;
+    height: 17px;
+}
+
+.AttendPercent .AttendBar {
+    background-color: #C0392B;
+    height: 17px;
+}
+
+.AttendPercent .AttendValue {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    font-weight: bold;
+}

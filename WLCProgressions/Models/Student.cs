@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -33,6 +34,25 @@ namespace WLCProgressions.Models
 
         [StringLength(50)]
         public string Completion { get; set; }
+        public int RiskCode { get; set; }
+
+        public int ClassesPlanned { get; set; }
+        public int ClassesCounted { get; set; }
+        public int ClassesMarked { get; set; }
+        public int ClassesUnmarked { get; set; }
+        public int ClassesPresent { get; set; }
+        public int ClassesAbsent { get; set; }
+        public int ClassesNeutral { get; set; }
+        public int ClassesAuthAbsence { get; set; }
+        public int ClassesLate { get; set; }
+
+        public double AttendPer { get; set; }
+
+        [StringLength(25)]
+        public string RiskName { get; set; }
+
+        [StringLength(20)]
+        public string RiskColour { get; set; }
 
         public int? DestinationCode { get; set; }
 

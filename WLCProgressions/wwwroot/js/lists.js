@@ -352,7 +352,7 @@ function displayStudents(system, academicYear, courseID, groupID) {
     }
 
     if (system !== "") {
-        dataToLoad += `&system=${system}`;
+        dataToLoad += `&system=${system}&systemILP=${system}`;
     }
 
     var loadedStudents = $.get(dataToLoad, function (data) {
@@ -375,8 +375,10 @@ function displayStudents(system, academicYear, courseID, groupID) {
                             <th scope="col">Student Ref</th>                                
                             <th scope="col">Surname</th>
                             <th scope="col">Forename</th>
-                            <th scope="col">DOB</th>
+                            <th scope="col">Age 31<sup>st</sup> Aug ${academicYear.substring(3, 5)}</th>
                             <th scope="col">Completion</th>
+                            <th scope="col">Attend %</th>
+                            <th scope="col">Risk</th>
                             <th scope="col">Progress</th>
                             <th scope="col">Destination</th>
                         </tr>
@@ -386,14 +388,41 @@ function displayStudents(system, academicYear, courseID, groupID) {
         for (let student in students) {
             let dateOfBirth = new Date(students[student].dob);
             let dateOfBirthStr = ("0" + dateOfBirth.getDate()).slice(-2) + "/" + ("0" + (dateOfBirth.getMonth() + 1)).slice(-2) + "/" + dateOfBirth.getFullYear();
+            let attendPer = students[student].attendPer;
+
+            let attendRate = "";
+
+            if (attendPer === 1) {
+                attendRate = "Excellent";
+            }
+            else if (attendPer >= 0.9000 && attendPer <= 0.9999) {
+                attendRate = "Good";
+            }
+            else if (attendPer >= 0.8500 && attendPer <= 0.8900) {
+                attendRate = "Poor";
+            }
+            else if (attendPer < 0.8500) {
+                attendRate = "VeryPoor";
+            }
+            else {
+                attendRate = "VeryPoor";
+            }
 
             htmlData += `
                         <tr>
                             <th scope="row">${students[student].studentRef}</th>
                             <td>${students[student].surname}</td>
                             <td>${students[student].forename}</td>
-                            <td>${dateOfBirthStr}</td>
+                            <td>${students[student].age31stAug + 1}</td>
                             <td>${students[student].completion}</td>
+                            <td>
+                                <div class="AttendPercent ${attendRate}">
+                                    <div class="AttendValue">${+(attendPer * 100).toFixed(1)}%</div>
+                                    <div class="AttendBar" style="width: ${attendPer * 100}%">
+                                    </div>
+                                </div>
+                            </td>
+                            <td><div class="RiskIndicator ${students[student].riskColour}"></div></td>
                             <td class="text-center">
                                 <label class="switch-sm">
                                     <input type="checkbox" class="ProgressStudent" data-id="${students[student].studentRef}">

@@ -1,0 +1,13 @@
+CREATE PROCEDURE [dbo].[SPR_PRG_Config]
+AS
+
+BEGIN
+	SET NOCOUNT ON;
+    SELECT
+        AcademicYear = CFG.Value,
+        ProgressionYear = CAST ( CAST ( LEFT ( CFG.Value, 2 )  AS INT ) + 1 AS VARCHAR(2) ) + '/' + CAST ( CAST ( RIGHT ( CFG.Value, 2 )  AS INT ) + 1 AS VARCHAR(2) )
+    FROM Config CFG
+    WHERE
+        CFG.ConfigID = 'PMO_AcademicYearID'
+END
+GO

@@ -1,0 +1,90 @@
+CREATE PROCEDURE [dbo].[SPR_PRG_GetCourseGroupList]
+	@System NVARCHAR(20),
+    @AcademicYear NVARCHAR(5),
+    @CourseSearch NVARCHAR(255)
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    DECLARE @SQLString NVARCHAR(MAX);
+    DECLARE @SQLParams NVARCHAR(MAX);
+
+	--DECLARE @CourseSearch VARCHAR(255) = 'English'
+    SET @SQLString = 
+    N'SELECT
+		AcademicYear = CRS.AcademicYearID,
+        SiteCode = STE.Code,
+		SiteName = STE.Description,
+		FacCode = RTRIM ( FAC.Code ),
+		FacName = FAC.Name,
+		TeamCode = RTRIM ( TEAM.Code ),
+		TeamName = TEAM.Name,
+		CourseID = CRS.OfferingID,
+		CourseCode = CRS.Code,
+		CourseTitle = CRS.Name,
+		AimCode = AIM.LEARNING_AIM_REF,
+		AimTitle = AIM.LEARNING_AIM_TITLE,
+		GroupID = COALESCE ( GRP.OfferingGroupID, 0 ),
+		GroupCode = GRP.Code,
+		GroupName = GRP.Description,
+		Enrolments = COALESCE ( ENR.Enrolments, 0 )
+	FROM ' + @System + '.dbo.Offering CRS
+	INNER JOIN ' + @System + '.dbo.Site STE
+		ON STE.SiteID = CRS.SiteID
+	INNER JOIN ' + @System + '.dbo.CollegeLevel TEAM
+		ON TEAM.SID = CRS.SID
+	LEFT JOIN (
+		SELECT DISTINCT
+			LNK.SubOfferingID
+		FROM ' + @System + '.dbo.LinkedOffering LNK
+	) CLD
+		ON CLD.SubOfferingID = CRS.OfferingID
+	LEFT JOIN ' + @System + '.dbo.CollegeLevel FAC
+		ON FAC.SID = TEAM.ParentSID
+	LEFT JOIN ' + @System + '.dbo.Learning_Aim AIM
+		ON AIM.LEARNING_AIM_REF = CRS.QualID
+	LEFT JOIN ' + @System + '.dbo.OfferingGroup GRP
+		ON GRP.OfferingID = CRS.OfferingID
+	LEFT JOIN (
+		SELECT
+			ENR.OfferingID,
+			ENR.OfferingGroupID,
+			Enrolments = COUNT ( SD.StudentDetailID )
+		FROM ' + @System + '.dbo.StudentDetail SD
+		INNER JOIN ' + @System + '.dbo.Enrolment ENR
+			ON ENR.StudentDetailID = SD.StudentDetailID
+		WHERE
+			SD.AcademicYearID = @AcademicYear
+			AND ENR.CompletionStatusID IN ( ''1'', ''2'' )
+		GROUP BY
+			ENR.OfferingID,
+			ENR.OfferingGroupID	
+	) ENR
+		ON ENR.OfferingID = CRS.OfferingID
+		AND COALESCE ( ENR.OfferingGroupID, 0 ) = COALESCE ( GRP.OfferingGroupID, 0 )
+	WHERE
+		CRS.AcademicYearID = @AcademicYear
+		AND CRS.OfferingStatusID IN ( ''1'', ''3'' ) --Live and pending only
+		AND CLD.SubOfferingID IS NULL --Is a parent (has no parents itself)
+		AND COALESCE ( ENR.Enrolments, 0 ) > 0 --Must have enrolments
+		AND CRS.Code + '' - '' + CRS.Name LIKE ''%'' + @CourseSearch + ''%''
+	ORDER BY
+		STE.Code,
+		FAC.Code,
+		TEAM.Code,
+		CRS.Code,
+		GRP.Code';
+
+    SET @SQLParams = 
+        N'@System NVARCHAR(20),
+        @AcademicYear NVARCHAR(5),
+        @CourseSearch NVARCHAR(255)';
+
+    EXECUTE sp_executesql 
+        @SQLString, 
+        @SQLParams, 
+        @System = @System, 
+        @AcademicYear = @AcademicYear, 
+        @CourseSearch = @CourseSearch;
+
+END

@@ -64,6 +64,9 @@ async function saveProgressions(system, academicYear, students, courseFromID, gr
         }
     }
 
+    //Close modal
+    $("#ProgressionModal").modal("hide");
+
     numErrors = numProgressedStudents - numSaved;
     if (numStudents === 0) {
         doErrorModal("Error Saving Progression (NSR: No Students Retrieved)", "Sorry an error occurred saving the progression of the learners.<br />Please try again.");

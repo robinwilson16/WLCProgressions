@@ -1,0 +1,50 @@
+CREATE PROCEDURE [dbo].[SPR_PRG_GetStudent]
+	@System NVARCHAR(20),
+    @AcademicYear NVARCHAR(5),
+    @StudentRef NVARCHAR(50)
+    
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    DECLARE @SQLString NVARCHAR(MAX);
+    DECLARE @SQLParams NVARCHAR(MAX);
+
+	-- DECLARE @StudentRef varchar(50) = '11000000'
+	
+    SET @SQLString = 
+    N'SELECT
+		SystemDatabase = @System,
+        AcademicYear = SD.AcademicYearID,
+        StudentRef = RTRIM ( SD.RefNo ),
+		Surname = SD.Surname,
+		Forename = SD.FirstForename,
+		DOB = SD.DateOfBirth,
+		Age31stAug = CAST ( FLOOR ( DATEDIFF ( DAY, COALESCE ( SD.DateOfBirth, CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ), CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ) / 365.23076923074 ) AS int ),
+		Completion = NULL,
+        DestinationCode = SD.LocalDestinationID,
+        DestinationName = DES.Description,
+		ProgressLearner = CAST ( 0 AS bit )
+	FROM ' + @System + '.dbo.StudentDetail SD
+    LEFT JOIN ' + @System + '.dbo.LocalDestination DES
+        ON DES.LocalDestinationID = SD.LocalDestinationID
+	WHERE
+		SD.AcademicYearID = @AcademicYear
+		AND SD.RefNo = @StudentRef
+	ORDER BY
+		SD.Surname,
+		SD.FirstForename,
+		SD.RefNo';
+
+    SET @SQLParams = 
+        N'@System NVARCHAR(20),
+        @AcademicYear NVARCHAR(5),
+        @StudentRef NVARCHAR(50)';
+
+    EXECUTE sp_executesql 
+        @SQLString, 
+        @SQLParams, 
+        @System = @System, 
+        @AcademicYear = @AcademicYear, 
+        @StudentRef = @StudentRef;
+END

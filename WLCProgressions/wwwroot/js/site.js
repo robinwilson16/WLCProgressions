@@ -194,11 +194,25 @@ $(".OfferTypeSelectList").change(function (event) {
         //If offer is conditional then display list of conditions
         $(".OfferConditionLabelCol").removeClass("d-none");
         $(".OfferConditionSelectListCol").removeClass("d-none");
+        $(".SaveProgressionButton").addClass("disabled");
     }
     else {
         $(".OfferConditionLabelCol").addClass("d-none");
         $(".OfferConditionSelectListCol").addClass("d-none");
         $("#OfferConditionSelectList").val(null);
+        $(".SaveProgressionButton").removeClass("disabled");
+    }
+});
+
+$(".OfferConditionSelectList").change(function (event) {
+    let offerCondition = $(this).val();
+
+    if (offerCondition === "") {
+        //If offer is conditional then display list of conditions
+        $(".SaveProgressionButton").addClass("disabled");
+    }
+    else {
+        $(".SaveProgressionButton").removeClass("disabled");
     }
 });
 
@@ -228,5 +242,47 @@ $(".SaveProgressionButton").click(function (event) {
         progressionType = "EXTERNAL";
     }
 
-    saveProgressions(system, progressionYear, students, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID);
+    isButtonDisabled = $(this).hasClass("disabled");
+
+    if (isButtonDisabled === false) {
+        saveProgressions(system, progressionYear, students, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID);
+    }
+    else {
+        //If user has missed something
+        let errors = "";
+        let offerType = $("#OfferTypeSelectList").val();
+        let offerCondition = $("#OfferConditionSelectList").val();
+
+        if (courseToID === "") {
+            errors += `
+                <li>
+                    Course to progress the learners to has not been chosen. Please search for, and pick a course from above
+                </li>`;
+        }
+
+        if (offerType == null) {
+            errors += `
+                <li>
+                    The type of offer being made has not been selected. Please specify the type of offer (conditional/unconditional/etc.)
+                </li>`;
+        }
+
+        if (offerType === "2" && offerCondition == null) {
+            errors += `
+                <li>
+                    The offer type you selected is conditional but no condition has been selected.
+                    If no condition is required select unconditional, otherwise please specify the condition
+                </li>`;
+        }
+
+        errors = `
+            <p>            
+                Please correct the errors below and attempt to save again:
+            </p>
+            <ul>
+                ${errors}
+            </ul>`;
+
+        doModal("Please Review Your Selection", errors);
+    }
 });

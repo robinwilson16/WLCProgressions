@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using WLCProgressions.Models;
 using WLCProgressions.Shared;
 
@@ -16,10 +17,12 @@ namespace WLCProgressions.Pages.Students
     public class SaveProgressionModel : PageModel
     {
         private readonly WLCProgressions.Data.ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public SaveProgressionModel(WLCProgressions.Data.ApplicationDbContext context)
+        public SaveProgressionModel(WLCProgressions.Data.ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         [BindProperty]
@@ -60,7 +63,7 @@ namespace WLCProgressions.Pages.Students
             try
             {
                 //await _context.SaveChangesAsync();
-                string systemDB = DatabaseSelector.GetDatabase(Progression.SystemDatabase);
+                string systemDB = DatabaseSelector.GetDatabase(_configuration, Progression.SystemDatabase);
                 var SystemParam = new SqlParameter("@System", systemDB);
                 var AcademicYearParam = new SqlParameter("@AcademicYear", Progression.AcademicYear);
                 var StudentRefParam = new SqlParameter("@StudentRef", Progression.StudentRef);

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using WLCProgressions.Models;
 using WLCProgressions.Shared;
 
@@ -14,10 +15,12 @@ namespace WLCProgressions.Pages.CourseGroups
     public class IndexModel : PageModel
     {
         private readonly WLCProgressions.Data.ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public IndexModel(WLCProgressions.Data.ApplicationDbContext context)
+        public IndexModel(WLCProgressions.Data.ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         public IList<CourseGroup> CourseGroup { get;set; }
@@ -30,7 +33,7 @@ namespace WLCProgressions.Pages.CourseGroups
             }
 
             //CourseGroup = await _context.CourseGroup.ToListAsync();
-            string systemDB = DatabaseSelector.GetDatabase(system);
+            string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
             var systemParam = new SqlParameter("@System", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
             var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
@@ -49,7 +52,7 @@ namespace WLCProgressions.Pages.CourseGroups
             }
 
             //CourseGroup = await _context.CourseGroup.ToListAsync();
-            string systemDB = DatabaseSelector.GetDatabase(system);
+            string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
             var systemParam = new SqlParameter("@System", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
             var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);

@@ -1,0 +1,1742 @@
+CREATE PROCEDURE [dbo].[SPR_PRG_SaveProgression]
+	@System NVARCHAR(50),
+    @AcademicYear NVARCHAR(5),
+    @StudentRef NVARCHAR(50),
+	@CourseFromID INT,
+    @GroupFromID INT,
+    @CourseToID INT,
+    @GroupToID INT,
+    @ProgressionType NVARCHAR(20),
+    @OfferTypeID INT,
+    @OfferConditionID INT,
+    @Username NVARCHAR(200)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    -- DECLARE @StudentRef VARCHAR(50) = '11000000'
+    -- DECLARE @AcademicYear VARCHAR(5) = '18/19'
+	-- DECLARE @CourseFromID INT = 18957
+    -- DECLARE @GroupFromID INT = 23973
+    -- DECLARE @CourseToID INT = 20177
+    -- DECLARE @GroupToID INT = 0
+    -- DECLARE @ProgressionType VARCHAR(20) = 'EXTERNAL'
+    -- DECLARE @OfferTypeID INT = 2
+    -- DECLARE @OfferConditionID INT = 10
+    -- DECLARE @Username VARCHAR(200) = 'r.wilson'
+
+    DECLARE @SQLString NVARCHAR(MAX);
+    DECLARE @SQLParams NVARCHAR(MAX);
+
+    BEGIN TRY
+        BEGIN TRANSACTION AddProgression
+        
+            DECLARE @ApplicationTypeID INT
+            DECLARE @InterviewTypeID INT
+            DECLARE @ApplicationDecisionID INT
+            DECLARE @CollegeDecisionID INT
+            DECLARE @StudentDetailID INT
+            DECLARE @OfferConditionIDCheck INT
+            DECLARE @OfferConditionDesc NVARCHAR(MAX)
+            DECLARE @CourseCode NVARCHAR(50);
+            DECLARE @CourseIDCheck INT
+            DECLARE @StaffID INT
+            DECLARE @ErrorMsg NVARCHAR(255) = '';
+
+            /*Check drop-down values are valid*/
+
+            SET @SQLString = 
+                N'SELECT 
+                    @OfferTypeIDOUT = APPO.ApplicationOfferID 
+                FROM ' + @System + '.dbo.ApplicationOffer APPO 
+                WHERE 
+                    APPO.ApplicationOfferID = @OfferTypeID';
+
+            SET @SQLParams = 
+                N'@OfferTypeID INT,
+                @OfferTypeIDOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @OfferTypeID = @OfferTypeID, 
+                @OfferTypeIDOUT = @OfferTypeID OUTPUT;
+            
+            SET @SQLString = 
+                N'SELECT 
+                    @OfferConditionIDOUT = APPOC.ApplicationOfferConditionID,
+                    @OfferConditionDescOUT = APPOC.Description
+                FROM ' + @System + '.dbo.ApplicationOfferCondition APPOC 
+                WHERE 
+                    APPOC.ApplicationOfferConditionID = @OfferConditionID';
+
+            SET @SQLParams = 
+                N'@OfferConditionID INT,
+                @OfferConditionIDOUT INT OUTPUT,
+                @OfferConditionDescOUT NVARCHAR(MAX) OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @OfferConditionID = @OfferConditionID, 
+                @OfferConditionIDOUT = @OfferConditionIDCheck OUTPUT,
+                @OfferConditionDescOUT = @OfferConditionDesc OUTPUT;
+            
+            SET @SQLString = 
+                N'SELECT
+                    @StaffIDOUT = STF.StaffID
+                FROM ' + @System + '.dbo._CCC_SystemUser SU
+                INNER JOIN ' + @System + '.dbo.Staff STF
+                    ON STF.SystemUserID = SU.SystemUserID
+                WHERE  
+                    SU.UserName = @Username';
+
+            SET @SQLParams = 
+                N'@Username NVARCHAR(200),
+                @StaffIDOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @Username = @Username, 
+                @StaffIDOUT = @StaffID OUTPUT;
+            
+            SET @SQLString = 
+                N'SELECT 
+                    @CourseIDCheckOUT = CRS.OfferingID 
+                FROM ' + @System + '.dbo.Offering CRS 
+                LEFT JOIN ' + @System + '.dbo.OfferingGroup GRP
+                    ON GRP.OfferingID = CRS.OfferingID
+                    AND GRP.OfferingGroupID = @GroupToID
+                WHERE 
+                    CRS.OfferingID = @CourseToID
+                    AND
+                        CASE
+                            WHEN @GroupToID = 0 THEN 1
+                            ELSE
+                                CASE
+                                    WHEN @GroupToID = GRP.OfferingGroupID THEN 1
+                                    ELSE 0
+                                END
+                        END = 1';
+
+            SET @SQLParams = 
+                N'@CourseToID INT,
+                @GroupToID INT,
+                @CourseIDCheckOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @CourseToID = @CourseToID, 
+                @GroupToID = @GroupToID, 
+                @CourseIDCheckOUT = @CourseIDCheck OUTPUT;
+
+            IF @CourseIDCheck IS NULL
+                BEGIN
+                    SET @ErrorMsg = 'Course ' + CAST ( @CourseToID AS VARCHAR(20) ) + ' and group ' + CAST ( COALESCE ( @GroupToID, 0 ) AS VARCHAR(20) ) + ' are not found in ' + @System + ' system';
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END
+
+            IF @OfferTypeID IS NULL
+                BEGIN
+                    SET @ErrorMsg = 'Application Offer Type is Invalid'
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END
+
+            IF @OfferConditionID IS NOT NULL AND @OfferConditionIDCheck IS NULL
+                BEGIN
+                    SET @ErrorMsg = 'Application Offer Condition is Invalid'
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END
+
+            IF @StaffID IS NULL
+                BEGIN
+                    SET @ErrorMsg = 'Your Logged On Username is Not a Valid ProSolution User'
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END
+
+            /*Set IDs based on if progression is internal or external (cross dept)*/
+            IF @ProgressionType = 'INTERNAL'
+                BEGIN
+                    SET @SQLString = 
+                        N'SELECT TOP 1 
+                            @ApplicationTypeIDOUT = APPT.ApplicationTypeID 
+                        FROM ' + @System + '.dbo.ApplicationType APPT 
+                        WHERE 
+                            APPT.Description = ''Internal Progression'' AND APPT.Enabled = 1';
+
+                    SET @SQLParams = 
+                        N'@ApplicationTypeIDOUT INT OUTPUT';
+
+                    EXECUTE sp_executesql 
+                        @SQLString, 
+                        @SQLParams,  
+                        @ApplicationTypeIDOUT = @ApplicationTypeID OUTPUT;
+
+                    SET @SQLString = 
+                        N'SELECT TOP 1 
+                            @InterviewTypeIDOUT = INTT.InterviewTypeID 
+                        FROM ' + @System + '.dbo.InterviewType INTT 
+                        WHERE 
+                            INTT.IsAvailable = 1 
+                            AND INTT.Description = ''Progression Interview''';
+
+                    SET @SQLParams = 
+                        N'@InterviewTypeIDOUT INT OUTPUT';
+
+                    EXECUTE sp_executesql 
+                        @SQLString, 
+                        @SQLParams,  
+                        @InterviewTypeIDOUT = @InterviewTypeID OUTPUT;
+
+                    SET @SQLString = 
+                        N'SELECT 
+                            @ApplicationDecisionIDOUT = APPD.ApplicationDecisionID 
+                        FROM ' + @System + '.dbo.ApplicationDecision APPD 
+                        WHERE 
+                            APPD.Description = ''Accepted'' 
+                            AND APPD.Enabled = 1';
+
+                    SET @SQLParams = 
+                        N'@ApplicationDecisionIDOUT INT OUTPUT';
+
+                    EXECUTE sp_executesql 
+                        @SQLString, 
+                        @SQLParams,  
+                        @ApplicationDecisionIDOUT = @ApplicationDecisionID OUTPUT;
+
+                    SET @SQLString = 
+                        N'SELECT 
+                            @CollegeDecisionIDOUT = APPDC.CollegeDecisionID 
+                        FROM ' + @System + '.dbo.CollegeDecision APPDC 
+                        WHERE 
+                            APPDC.Description = ''Accepted'' 
+                            AND APPDC.Enabled = 1';
+
+                    SET @SQLParams = 
+                        N'@CollegeDecisionIDOUT INT OUTPUT';
+
+                    EXECUTE sp_executesql 
+                        @SQLString, 
+                        @SQLParams,  
+                        @CollegeDecisionIDOUT = @CollegeDecisionID OUTPUT; 
+                END
+            ELSE
+                BEGIN
+                    SET @SQLString = 
+                        N'SELECT 
+                            @ApplicationTypeIDOUT = APPT.ApplicationTypeID 
+                        FROM ' + @System + '.dbo.ApplicationType APPT 
+                        WHERE 
+                            APPT.Description = ''Cross department Progression'' 
+                            AND APPT.Enabled = 1';
+
+                    SET @SQLParams = 
+                        N'@ApplicationTypeIDOUT INT OUTPUT';
+
+                    EXECUTE sp_executesql 
+                        @SQLString, 
+                        @SQLParams,  
+                        @ApplicationTypeIDOUT = @ApplicationTypeID OUTPUT;
+                    
+                    SET @SQLString = 
+                        N'SELECT TOP 1 
+                            @InterviewTypeIDOUT = INTT.InterviewTypeID 
+                        FROM ' + @System + '.dbo.InterviewType INTT 
+                        WHERE 
+                            INTT.IsAvailable = 1 
+                            AND INTT.Description = ''Tutor Reference''';
+
+                    SET @SQLParams = 
+                        N'@InterviewTypeIDOUT INT OUTPUT';
+
+                    EXECUTE sp_executesql 
+                        @SQLString, 
+                        @SQLParams,  
+                        @InterviewTypeIDOUT = @InterviewTypeID OUTPUT;
+
+                    SET @ApplicationDecisionID = NULL
+                    SET @CollegeDecisionID = NULL
+                END
+
+            IF @ApplicationTypeID IS NULL
+                BEGIN
+                    SET @ErrorMsg = 'Correct Application Type ID Cannot Be Found in ProSolution Database'
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END
+
+            IF @InterviewTypeID IS NULL
+                BEGIN
+                    SET @ErrorMsg = 'Correct Interview Type ID Cannot Be Found in ProSolution Database'
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END
+
+            /*First see if student detail record exists for progression year*/
+            SET @SQLString = 
+                N'SELECT 
+                    @studentDetailIDOUT = SD.StudentDetailID 
+                FROM ' + @System + '.dbo.StudentDetail SD 
+                WHERE 
+                    SD.AcademicYearID = @AcademicYear 
+                    AND SD.RefNo = @StudentRef';
+
+            SET @SQLParams = 
+                N'@AcademicYear NVARCHAR(5),
+                @StudentRef NVARCHAR(50),
+                @studentDetailIDOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,  
+                @AcademicYear = @AcademicYear,
+                @StudentRef = @StudentRef,
+                @studentDetailIDOUT = @studentDetailID OUTPUT; 
+
+            /*Create record if required*/
+            IF @StudentDetailID IS NULL
+            BEGIN
+                DECLARE @StudentDetailInserted TABLE (
+                    StudentDetailID INT
+                )
+
+                SET @SQLString = 
+                    N'INSERT INTO ' + @System + '.dbo.StudentDetail
+                    (
+                        StudentID,
+                        AcademicYearID,
+                        RefNo,
+                        Title,
+                        Surname,
+                        SurnameAtBirth,
+                        FirstForename,
+                        OtherForenames,
+                        DateOfBirth,
+                        Sex,
+                        Tel2,
+                        AltTel2,
+                        MobileTel,
+                        Email,
+                        NI,
+                        EthnicGroupID,
+                        EuroResidentID,
+                        CountryID,
+                        LocalDestinationID,
+                        Childcare,
+                        Identification,
+                        WideningParticipationID,
+                        WideningParticipationFactor,
+                        QualOnEntryComplete,
+                        AccommodationTypeID,
+                        BankID,
+                        BankBranchID,
+                        AccountNoEncrypted,
+                        NameOnAccountEncrypted,
+                        SendMarketingInfo,
+                        SchoolID,
+                        ILARef,
+                        ILARefConfirmedBy,
+                        ILARefConfirmedDate,
+                        AsylumSeekerRef,
+                        StudyElsewhere,
+                        EmploymentBeneficiaries,
+                        StudentInitiativeID,
+                        FundingEntitlementID,
+                        NationalityID,
+                        HighestQualID,
+                        SOCOccupationID,
+                        LastInstitutionID,
+                        YearLeftLastInstitution,
+                        NoOfALevelsID,
+                        ALevelScore,
+                        NoOfSCEHighersID,
+                        SCEHighersScore,
+                        NoOfVocationalQualsID,
+                        Notes,
+                        VLELastSent,
+                        MostRecentProgrammeStartDate,
+                        CreatedBy,
+                        CreatedDate,
+                        ESFID,
+                        ESFStartDate,
+                        ESFEndDate,
+                        UPIN,
+                        LearnerSupportReason1ID,
+                        LearnerSupportReason2ID,
+                        LearnerSupportReason3ID,
+                        LearnerSupportReason4ID,
+                        PriorAttainmentLevelID,
+                        StudentInitiative2ID,
+                        LocalLearnerMonitoring1,
+                        LocalLearnerMonitoring2,
+                        ProviderSpecified1,
+                        ProviderSpecified2,
+                        PreviousRefNo,
+                        FundingEntitlement2ID,
+                        Deleted,
+                        StaffID,
+                        LearningAgreementRequired,
+                        SocioEconomicClassID,
+                        PreviousStudentRefNo,
+                        SupportRef,
+                        TutorID,
+                        DefaultExtraTime,
+                        DefaultSeparateRoom,
+                        UserDefined1,
+                        UserDefined2,
+                        UserDefined3,
+                        UserDefined4,
+                        UserDefined5,
+                        UserDefined6,
+                        UserDefined7,
+                        UserDefined8,
+                        UserDefined9,
+                        AdditionalSupportCost,
+                        CreatedUsing,
+                        InstitutionChoiceNumber,
+                        HEPreference,
+                        Exclude,
+                        ExcludeFromDate,
+                        ExcludeToDate,
+                        Overseas,
+                        PotentialStudentStatusID,
+                        IndustrialSectorID,
+                        ReferencesConfirmedBy,
+                        ReferencesConfirmedDate,
+                        LastOrganisationLeavingDate,
+                        IsPotentialStudent,
+                        HeardAboutCollegeID,
+                        CarReg,
+                        CarMake,
+                        CarModel,
+                        EMAStudentHasSignedPart2,
+                        EMAStudyPatternID,
+                        EMACourseTypeID,
+                        EMAFileSubmissionID,
+                        ReasonDidntEnrolID,
+                        EMASiteID,
+                        EMAErrorText,
+                        EMAConfirmed,
+                        CollegeChoice,
+                        ContactPreference,
+                        StillAtLastSchool,
+                        IsAimHigher,
+                        IsWheelchairUser,
+                        LSCNumber,
+                        ALSRequired,
+                        ALGConfirmed,
+                        ReferencesNotes,
+                        HasPEP,
+                        MedicalDeclarationReceived,
+                        MedicalConditionIdentified,
+                        LearnerSupportType1ID,
+                        LearnerSupportType2ID,
+                        LearnerSupportType3ID,
+                        LearnerSupportType4ID,
+                        UCASTariffPoints,
+                        UCASApplicationCode,
+                        HESpecialFeeIndicatorID,
+                        KnownAs,
+                        UserDefined10,
+                        UserDefined11,
+                        UserDefined12,
+                        UserDefined13,
+                        UserDefined14,
+                        UserDefined15,
+                        SupportNeed1ID,
+                        SupportNeed2ID,
+                        SupportNeed3ID,
+                        DisabilityNotes,
+                        PlaceOfBirth,
+                        DateOfAddressCapture,
+                        VerificationTypeID,
+                        VerificationOtherDescription,
+                        AbilityToShareID,
+                        PostcodeOutEnrolment,
+                        PostcodeInEnrolment,
+                        ReasonForExclusion,
+                        EMADataSentSuccessfully,
+                        IsMatureStudent,
+                        StudentVisaRequirementID,
+                        HEQualsOnEntryID,
+                        EMAProgrammeOfStudyID,
+                        EMAGroupID,
+                        EMAFlexibleBonusFrequencyID,
+                        LocalAreaAssessmentReceived,
+                        EMAAdHocNote,
+                        Safeguarding,
+                        NumberOfYearsAtCurrentAddress,
+                        EMANote,
+                        Categories,
+                        RestrictedUseAllowContactByPost,
+                        RestrictedUseAllowContactByTelephone,
+                        RestrictedUseAllowContactByEmail,
+                        ParksMotorVehicleAtCollege,
+                        ReceivedFreeSchoolMeals,
+                        TutorGroupID,
+                        CriminalConvictionID,
+                        StudentFirstLanguageID,
+                        LearnerStatusID,
+                        MigrationID,
+                        RestrictedUseAllowResearch,
+                        RestrictedUseAllowLearningOpportunities,
+                        RestrictedUseNoContactIllness,
+                        AdditionalLearningSupportLevelID,
+                        HasLearningDifficultyAssessment,
+                        HasDisabledStudentsAllowance,
+                        LearnerSupportType5ID,
+                        ALSRequested,
+                        SchoolAttendedFrom,
+                        SchoolAttendedTo,
+                        BuildingSocietyRollNoEncrypted,
+                        CarColour,
+                        CarParkPassType,
+                        UserDefined16,
+                        UserDefined17,
+                        UserDefined18,
+                        UserDefined19,
+                        UserDefined20,
+                        UserDefined21,
+                        UserDefined22,
+                        UserDefined23,
+                        UserDefined24,
+                        UserDefined25,
+                        UserDefined26,
+                        UserDefined27,
+                        UserDefined28,
+                        UserDefined29,
+                        UserDefined30,
+                        HasEducationHealthCarePlan,
+                        PlannedLearningHours,
+                        PlannedEEPHours,
+                        PreviousUKLearningProvider,
+                        LocalDestinationOrganisationID,
+                        LRSStudentContactTypeID,
+                        ReferralSourceID,
+                        ReferralDate,
+                        PriorAttainmentLevelInYearID,
+                        LookedAfter,
+                        CareLeaver,
+                        GCSEMathsAchievementID,
+                        GCSEEnglishAchievementID,
+                        PupilPremiumFundingEligibilityID,
+                        HEFinTypeCash,
+                        HEFinTypeNearCash,
+                        HEFinTypeAccomDiscount,
+                        HEFinTypeOther,
+                        FreeMealsEligibilityID,
+                        PupilPremiumFundingEligibility2ID,
+                        HighNeedsStudent,
+                        AdditionalBankID,
+                        AdditionalBankBranchID,
+                        AdditionalBankAccountNoEncrypted,
+                        AdditionalBankAccountNameEncrypted,
+                        ExcludeFromPlannedHoursCalculation,
+                        YoungParent,
+                        YoungCarer,
+                        HasSpecialEducationNeeds,
+                        GCSEEnglishQualificationGrade,
+                        GCSEMathsQualificationGrade,
+                        HouseholdSituation1ID,
+                        HouseholdSituation2ID,
+                        LearningDiffOrDisID,
+                        GCSEMathsConditionOfFundingID,
+                        GCSEEnglishConditionOfFundingID,
+                        AchievedEnglishGCSEByEndOfYear11,
+                        AchievedMathsGCSEByEndOfYear11,
+                        UserDefined31,
+                        UserDefined32,
+                        UserDefined33,
+                        UserDefined34,
+                        UserDefined35,
+                        UserDefined36,
+                        UserDefined37,
+                        UserDefined38,
+                        UserDefined39,
+                        UserDefined40,
+                        UserDefined41,
+                        UserDefined42,
+                        UserDefined43,
+                        UserDefined44,
+                        UserDefined45,
+                        GiftedAndTalented,
+                        ALSDeclined,
+                        UCASPersonalID,
+                        PreMergerLearningProviderID,
+                        UserDefinedDataProtection1,
+                        UserDefinedDataProtection2,
+                        UserDefinedDataProtection3,
+                        UserDefinedDataProtection4,
+                        UserDefinedDataProtection5,
+                        UserDefinedDataProtection6,
+                        UserDefinedDataProtection7,
+                        UserDefinedDataProtection8,
+                        UserDefinedDataProtection9,
+                        UserDefinedDataProtection10,
+                        UserDefinedDataProtection11,
+                        UserDefinedDataProtection12,
+                        UserDefinedDataProtection13,
+                        UserDefinedDataProtection14,
+                        UserDefinedDataProtection15,
+                        CampusIdentifier,
+                        OTJHours,
+                        HasConsentGiven,
+                        ConsentGivenDate,
+                        AcceptMarketingConsent,
+                        AcceptShareInfoConsent,
+                        EffectiveDate,
+                        ContactedBy,
+                        GDPRNotes,
+                        CanBeContactBySMS,
+                        CanBeContactBySocialMedia,
+                        CanBeSharedByEmail,
+                        CanBeSharedByWebSite,
+                        CanBeSharedBySocialMedia,
+                        GDPRAllowContactByPhone,
+                        GDPRAllowContactByPost,
+                        GDPRAllowContactByEmail
+                    )
+                    OUTPUT INSERTED.StudentDetailID
+                    SELECT
+                        SD.StudentID,
+                        SD.AcademicYearID,
+                        SD.RefNo,
+                        SD.Title,
+                        SD.Surname,
+                        SD.SurnameAtBirth,
+                        SD.FirstForename,
+                        SD.OtherForenames,
+                        SD.DateOfBirth,
+                        SD.Sex,
+                        SD.Tel2,
+                        SD.AltTel2,
+                        SD.MobileTel,
+                        SD.Email,
+                        SD.NI,
+                        SD.EthnicGroupID,
+                        SD.EuroResidentID,
+                        SD.CountryID,
+                        LocalDestinationID = NULL,
+                        SD.Childcare,
+                        SD.Identification,
+                        SD.WideningParticipationID,
+                        SD.WideningParticipationFactor,
+                        SD.QualOnEntryComplete,
+                        SD.AccommodationTypeID,
+                        SD.BankID,
+                        SD.BankBranchID,
+                        SD.AccountNoEncrypted,
+                        SD.NameOnAccountEncrypted,
+                        SD.SendMarketingInfo,
+                        SD.SchoolID,
+                        SD.ILARef,
+                        SD.ILARefConfirmedBy,
+                        SD.ILARefConfirmedDate,
+                        SD.AsylumSeekerRef,
+                        SD.StudyElsewhere,
+                        SD.EmploymentBeneficiaries,
+                        SD.StudentInitiativeID,
+                        SD.FundingEntitlementID,
+                        SD.NationalityID,
+                        SD.HighestQualID,
+                        SD.SOCOccupationID,
+                        SD.LastInstitutionID,
+                        SD.YearLeftLastInstitution,
+                        SD.NoOfALevelsID,
+                        SD.ALevelScore,
+                        SD.NoOfSCEHighersID,
+                        SD.SCEHighersScore,
+                        SD.NoOfVocationalQualsID,
+                        SD.Notes,
+                        SD.VLELastSent,
+                        SD.MostRecentProgrammeStartDate,
+                        SD.CreatedBy,
+                        SD.CreatedDate,
+                        SD.ESFID,
+                        SD.ESFStartDate,
+                        SD.ESFEndDate,
+                        SD.UPIN,
+                        SD.LearnerSupportReason1ID,
+                        SD.LearnerSupportReason2ID,
+                        SD.LearnerSupportReason3ID,
+                        SD.LearnerSupportReason4ID,
+                        SD.PriorAttainmentLevelID,
+                        SD.StudentInitiative2ID,
+                        SD.LocalLearnerMonitoring1,
+                        SD.LocalLearnerMonitoring2,
+                        SD.ProviderSpecified1,
+                        SD.ProviderSpecified2,
+                        SD.PreviousRefNo,
+                        SD.FundingEntitlement2ID,
+                        SD.Deleted,
+                        SD.StaffID,
+                        SD.LearningAgreementRequired,
+                        SD.SocioEconomicClassID,
+                        SD.PreviousStudentRefNo,
+                        SD.SupportRef,
+                        SD.TutorID,
+                        SD.DefaultExtraTime,
+                        SD.DefaultSeparateRoom,
+                        SD.UserDefined1,
+                        SD.UserDefined2,
+                        SD.UserDefined3,
+                        SD.UserDefined4,
+                        SD.UserDefined5,
+                        SD.UserDefined6,
+                        SD.UserDefined7,
+                        SD.UserDefined8,
+                        SD.UserDefined9,
+                        SD.AdditionalSupportCost,
+                        SD.CreatedUsing,
+                        SD.InstitutionChoiceNumber,
+                        SD.HEPreference,
+                        SD.Exclude,
+                        SD.ExcludeFromDate,
+                        SD.ExcludeToDate,
+                        SD.Overseas,
+                        SD.PotentialStudentStatusID,
+                        SD.IndustrialSectorID,
+                        SD.ReferencesConfirmedBy,
+                        SD.ReferencesConfirmedDate,
+                        SD.LastOrganisationLeavingDate,
+                        IsPotentialStudent = 1,
+                        SD.HeardAboutCollegeID,
+                        SD.CarReg,
+                        SD.CarMake,
+                        SD.CarModel,
+                        SD.EMAStudentHasSignedPart2,
+                        SD.EMAStudyPatternID,
+                        SD.EMACourseTypeID,
+                        SD.EMAFileSubmissionID,
+                        SD.ReasonDidntEnrolID,
+                        SD.EMASiteID,
+                        SD.EMAErrorText,
+                        SD.EMAConfirmed,
+                        SD.CollegeChoice,
+                        SD.ContactPreference,
+                        SD.StillAtLastSchool,
+                        SD.IsAimHigher,
+                        SD.IsWheelchairUser,
+                        SD.LSCNumber,
+                        SD.ALSRequired,
+                        SD.ALGConfirmed,
+                        SD.ReferencesNotes,
+                        SD.HasPEP,
+                        SD.MedicalDeclarationReceived,
+                        SD.MedicalConditionIdentified,
+                        SD.LearnerSupportType1ID,
+                        SD.LearnerSupportType2ID,
+                        SD.LearnerSupportType3ID,
+                        SD.LearnerSupportType4ID,
+                        SD.UCASTariffPoints,
+                        SD.UCASApplicationCode,
+                        SD.HESpecialFeeIndicatorID,
+                        SD.KnownAs,
+                        SD.UserDefined10,
+                        SD.UserDefined11,
+                        SD.UserDefined12,
+                        SD.UserDefined13,
+                        SD.UserDefined14,
+                        SD.UserDefined15,
+                        SD.SupportNeed1ID,
+                        SD.SupportNeed2ID,
+                        SD.SupportNeed3ID,
+                        SD.DisabilityNotes,
+                        SD.PlaceOfBirth,
+                        SD.DateOfAddressCapture,
+                        SD.VerificationTypeID,
+                        SD.VerificationOtherDescription,
+                        SD.AbilityToShareID,
+                        SD.PostcodeOutEnrolment,
+                        SD.PostcodeInEnrolment,
+                        SD.ReasonForExclusion,
+                        SD.EMADataSentSuccessfully,
+                        SD.IsMatureStudent,
+                        SD.StudentVisaRequirementID,
+                        SD.HEQualsOnEntryID,
+                        SD.EMAProgrammeOfStudyID,
+                        SD.EMAGroupID,
+                        SD.EMAFlexibleBonusFrequencyID,
+                        SD.LocalAreaAssessmentReceived,
+                        SD.EMAAdHocNote,
+                        SD.Safeguarding,
+                        SD.NumberOfYearsAtCurrentAddress,
+                        SD.EMANote,
+                        SD.Categories,
+                        SD.RestrictedUseAllowContactByPost,
+                        SD.RestrictedUseAllowContactByTelephone,
+                        SD.RestrictedUseAllowContactByEmail,
+                        SD.ParksMotorVehicleAtCollege,
+                        SD.ReceivedFreeSchoolMeals,
+                        SD.TutorGroupID,
+                        SD.CriminalConvictionID,
+                        SD.StudentFirstLanguageID,
+                        SD.LearnerStatusID,
+                        SD.MigrationID,
+                        SD.RestrictedUseAllowResearch,
+                        SD.RestrictedUseAllowLearningOpportunities,
+                        SD.RestrictedUseNoContactIllness,
+                        SD.AdditionalLearningSupportLevelID,
+                        SD.HasLearningDifficultyAssessment,
+                        SD.HasDisabledStudentsAllowance,
+                        SD.LearnerSupportType5ID,
+                        SD.ALSRequested,
+                        SD.SchoolAttendedFrom,
+                        SD.SchoolAttendedTo,
+                        SD.BuildingSocietyRollNoEncrypted,
+                        SD.CarColour,
+                        SD.CarParkPassType,
+                        SD.UserDefined16,
+                        SD.UserDefined17,
+                        SD.UserDefined18,
+                        SD.UserDefined19,
+                        SD.UserDefined20,
+                        SD.UserDefined21,
+                        SD.UserDefined22,
+                        SD.UserDefined23,
+                        SD.UserDefined24,
+                        SD.UserDefined25,
+                        SD.UserDefined26,
+                        SD.UserDefined27,
+                        SD.UserDefined28,
+                        SD.UserDefined29,
+                        SD.UserDefined30,
+                        SD.HasEducationHealthCarePlan,
+                        SD.PlannedLearningHours,
+                        SD.PlannedEEPHours,
+                        SD.PreviousUKLearningProvider,
+                        SD.LocalDestinationOrganisationID,
+                        SD.LRSStudentContactTypeID,
+                        SD.ReferralSourceID,
+                        SD.ReferralDate,
+                        SD.PriorAttainmentLevelInYearID,
+                        SD.LookedAfter,
+                        SD.CareLeaver,
+                        SD.GCSEMathsAchievementID,
+                        SD.GCSEEnglishAchievementID,
+                        SD.PupilPremiumFundingEligibilityID,
+                        SD.HEFinTypeCash,
+                        SD.HEFinTypeNearCash,
+                        SD.HEFinTypeAccomDiscount,
+                        SD.HEFinTypeOther,
+                        SD.FreeMealsEligibilityID,
+                        SD.PupilPremiumFundingEligibility2ID,
+                        SD.HighNeedsStudent,
+                        SD.AdditionalBankID,
+                        SD.AdditionalBankBranchID,
+                        SD.AdditionalBankAccountNoEncrypted,
+                        SD.AdditionalBankAccountNameEncrypted,
+                        SD.ExcludeFromPlannedHoursCalculation,
+                        SD.YoungParent,
+                        SD.YoungCarer,
+                        SD.HasSpecialEducationNeeds,
+                        SD.GCSEEnglishQualificationGrade,
+                        SD.GCSEMathsQualificationGrade,
+                        SD.HouseholdSituation1ID,
+                        SD.HouseholdSituation2ID,
+                        SD.LearningDiffOrDisID,
+                        SD.GCSEMathsConditionOfFundingID,
+                        SD.GCSEEnglishConditionOfFundingID,
+                        SD.AchievedEnglishGCSEByEndOfYear11,
+                        SD.AchievedMathsGCSEByEndOfYear11,
+                        SD.UserDefined31,
+                        SD.UserDefined32,
+                        SD.UserDefined33,
+                        SD.UserDefined34,
+                        SD.UserDefined35,
+                        SD.UserDefined36,
+                        SD.UserDefined37,
+                        SD.UserDefined38,
+                        SD.UserDefined39,
+                        SD.UserDefined40,
+                        SD.UserDefined41,
+                        SD.UserDefined42,
+                        SD.UserDefined43,
+                        SD.UserDefined44,
+                        SD.UserDefined45,
+                        SD.GiftedAndTalented,
+                        SD.ALSDeclined,
+                        SD.UCASPersonalID,
+                        SD.PreMergerLearningProviderID,
+                        SD.UserDefinedDataProtection1,
+                        SD.UserDefinedDataProtection2,
+                        SD.UserDefinedDataProtection3,
+                        SD.UserDefinedDataProtection4,
+                        SD.UserDefinedDataProtection5,
+                        SD.UserDefinedDataProtection6,
+                        SD.UserDefinedDataProtection7,
+                        SD.UserDefinedDataProtection8,
+                        SD.UserDefinedDataProtection9,
+                        SD.UserDefinedDataProtection10,
+                        SD.UserDefinedDataProtection11,
+                        SD.UserDefinedDataProtection12,
+                        SD.UserDefinedDataProtection13,
+                        SD.UserDefinedDataProtection14,
+                        SD.UserDefinedDataProtection15,
+                        SD.CampusIdentifier,
+                        SD.OTJHours,
+                        SD.HasConsentGiven,
+                        SD.ConsentGivenDate,
+                        SD.AcceptMarketingConsent,
+                        SD.AcceptShareInfoConsent,
+                        SD.EffectiveDate,
+                        SD.ContactedBy,
+                        SD.GDPRNotes,
+                        SD.CanBeContactBySMS,
+                        SD.CanBeContactBySocialMedia,
+                        SD.CanBeSharedByEmail,
+                        SD.CanBeSharedByWebSite,
+                        SD.CanBeSharedBySocialMedia,
+                        SD.GDPRAllowContactByPhone,
+                        SD.GDPRAllowContactByPost,
+                        SD.GDPRAllowContactByEmail
+                    FROM (
+                        SELECT
+                            SD.StudentID,
+                            AcademicYearID = @AcademicYear,
+                            SD.RefNo,
+                            SD.Title,
+                            SD.Surname,
+                            SD.SurnameAtBirth,
+                            SD.FirstForename,
+                            SD.OtherForenames,
+                            SD.DateOfBirth,
+                            SD.Sex,
+                            SD.Tel2,
+                            SD.AltTel2,
+                            SD.MobileTel,
+                            SD.Email,
+                            SD.NI,
+                            SD.EthnicGroupID,
+                            SD.EuroResidentID,
+                            SD.CountryID,
+                            LocalDestinationID = NULL,
+                            SD.Childcare,
+                            SD.Identification,
+                            SD.WideningParticipationID,
+                            SD.WideningParticipationFactor,
+                            SD.QualOnEntryComplete,
+                            SD.AccommodationTypeID,
+                            SD.BankID,
+                            SD.BankBranchID,
+                            SD.AccountNoEncrypted,
+                            SD.NameOnAccountEncrypted,
+                            SD.SendMarketingInfo,
+                            SD.SchoolID,
+                            SD.ILARef,
+                            SD.ILARefConfirmedBy,
+                            SD.ILARefConfirmedDate,
+                            SD.AsylumSeekerRef,
+                            SD.StudyElsewhere,
+                            SD.EmploymentBeneficiaries,
+                            SD.StudentInitiativeID,
+                            SD.FundingEntitlementID,
+                            SD.NationalityID,
+                            SD.HighestQualID,
+                            SD.SOCOccupationID,
+                            SD.LastInstitutionID,
+                            SD.YearLeftLastInstitution,
+                            SD.NoOfALevelsID,
+                            SD.ALevelScore,
+                            SD.NoOfSCEHighersID,
+                            SD.SCEHighersScore,
+                            SD.NoOfVocationalQualsID,
+                            SD.Notes,
+                            SD.VLELastSent,
+                            SD.MostRecentProgrammeStartDate,
+                            CreatedBy = @Username,
+                            CreatedDate = GETDATE(),
+                            SD.ESFID,
+                            SD.ESFStartDate,
+                            SD.ESFEndDate,
+                            SD.UPIN,
+                            SD.LearnerSupportReason1ID,
+                            SD.LearnerSupportReason2ID,
+                            SD.LearnerSupportReason3ID,
+                            SD.LearnerSupportReason4ID,
+                            SD.PriorAttainmentLevelID,
+                            SD.StudentInitiative2ID,
+                            SD.LocalLearnerMonitoring1,
+                            SD.LocalLearnerMonitoring2,
+                            SD.ProviderSpecified1,
+                            SD.ProviderSpecified2,
+                            SD.PreviousRefNo,
+                            SD.FundingEntitlement2ID,
+                            SD.Deleted,
+                            SD.StaffID,
+                            SD.LearningAgreementRequired,
+                            SD.SocioEconomicClassID,
+                            SD.PreviousStudentRefNo,
+                            SD.SupportRef,
+                            SD.TutorID,
+                            SD.DefaultExtraTime,
+                            SD.DefaultSeparateRoom,
+                            SD.UserDefined1,
+                            SD.UserDefined2,
+                            SD.UserDefined3,
+                            SD.UserDefined4,
+                            SD.UserDefined5,
+                            SD.UserDefined6,
+                            SD.UserDefined7,
+                            SD.UserDefined8,
+                            SD.UserDefined9,
+                            SD.AdditionalSupportCost,
+                            SD.CreatedUsing,
+                            SD.InstitutionChoiceNumber,
+                            SD.HEPreference,
+                            SD.Exclude,
+                            SD.ExcludeFromDate,
+                            SD.ExcludeToDate,
+                            SD.Overseas,
+                            SD.PotentialStudentStatusID,
+                            SD.IndustrialSectorID,
+                            SD.ReferencesConfirmedBy,
+                            SD.ReferencesConfirmedDate,
+                            SD.LastOrganisationLeavingDate,
+                            SD.IsPotentialStudent,
+                            SD.HeardAboutCollegeID,
+                            SD.CarReg,
+                            SD.CarMake,
+                            SD.CarModel,
+                            SD.EMAStudentHasSignedPart2,
+                            SD.EMAStudyPatternID,
+                            SD.EMACourseTypeID,
+                            SD.EMAFileSubmissionID,
+                            SD.ReasonDidntEnrolID,
+                            SD.EMASiteID,
+                            SD.EMAErrorText,
+                            SD.EMAConfirmed,
+                            SD.CollegeChoice,
+                            SD.ContactPreference,
+                            SD.StillAtLastSchool,
+                            SD.IsAimHigher,
+                            SD.IsWheelchairUser,
+                            SD.LSCNumber,
+                            SD.ALSRequired,
+                            SD.ALGConfirmed,
+                            SD.ReferencesNotes,
+                            SD.HasPEP,
+                            SD.MedicalDeclarationReceived,
+                            SD.MedicalConditionIdentified,
+                            SD.LearnerSupportType1ID,
+                            SD.LearnerSupportType2ID,
+                            SD.LearnerSupportType3ID,
+                            SD.LearnerSupportType4ID,
+                            SD.UCASTariffPoints,
+                            SD.UCASApplicationCode,
+                            SD.HESpecialFeeIndicatorID,
+                            SD.KnownAs,
+                            SD.UserDefined10,
+                            SD.UserDefined11,
+                            SD.UserDefined12,
+                            SD.UserDefined13,
+                            SD.UserDefined14,
+                            SD.UserDefined15,
+                            SD.SupportNeed1ID,
+                            SD.SupportNeed2ID,
+                            SD.SupportNeed3ID,
+                            SD.DisabilityNotes,
+                            SD.PlaceOfBirth,
+                            SD.DateOfAddressCapture,
+                            SD.VerificationTypeID,
+                            SD.VerificationOtherDescription,
+                            SD.AbilityToShareID,
+                            SD.PostcodeOutEnrolment,
+                            SD.PostcodeInEnrolment,
+                            SD.ReasonForExclusion,
+                            SD.EMADataSentSuccessfully,
+                            SD.IsMatureStudent,
+                            SD.StudentVisaRequirementID,
+                            SD.HEQualsOnEntryID,
+                            SD.EMAProgrammeOfStudyID,
+                            SD.EMAGroupID,
+                            SD.EMAFlexibleBonusFrequencyID,
+                            SD.LocalAreaAssessmentReceived,
+                            SD.EMAAdHocNote,
+                            SD.Safeguarding,
+                            SD.NumberOfYearsAtCurrentAddress,
+                            SD.EMANote,
+                            SD.Categories,
+                            SD.RestrictedUseAllowContactByPost,
+                            SD.RestrictedUseAllowContactByTelephone,
+                            SD.RestrictedUseAllowContactByEmail,
+                            SD.ParksMotorVehicleAtCollege,
+                            SD.ReceivedFreeSchoolMeals,
+                            SD.TutorGroupID,
+                            SD.CriminalConvictionID,
+                            SD.StudentFirstLanguageID,
+                            SD.LearnerStatusID,
+                            SD.MigrationID,
+                            SD.RestrictedUseAllowResearch,
+                            SD.RestrictedUseAllowLearningOpportunities,
+                            SD.RestrictedUseNoContactIllness,
+                            SD.AdditionalLearningSupportLevelID,
+                            SD.HasLearningDifficultyAssessment,
+                            SD.HasDisabledStudentsAllowance,
+                            SD.LearnerSupportType5ID,
+                            SD.ALSRequested,
+                            SD.SchoolAttendedFrom,
+                            SD.SchoolAttendedTo,
+                            SD.BuildingSocietyRollNoEncrypted,
+                            SD.CarColour,
+                            SD.CarParkPassType,
+                            SD.UserDefined16,
+                            SD.UserDefined17,
+                            SD.UserDefined18,
+                            SD.UserDefined19,
+                            SD.UserDefined20,
+                            SD.UserDefined21,
+                            SD.UserDefined22,
+                            SD.UserDefined23,
+                            SD.UserDefined24,
+                            SD.UserDefined25,
+                            SD.UserDefined26,
+                            SD.UserDefined27,
+                            SD.UserDefined28,
+                            SD.UserDefined29,
+                            SD.UserDefined30,
+                            SD.HasEducationHealthCarePlan,
+                            SD.PlannedLearningHours,
+                            SD.PlannedEEPHours,
+                            SD.PreviousUKLearningProvider,
+                            SD.LocalDestinationOrganisationID,
+                            SD.LRSStudentContactTypeID,
+                            SD.ReferralSourceID,
+                            SD.ReferralDate,
+                            SD.PriorAttainmentLevelInYearID,
+                            SD.LookedAfter,
+                            SD.CareLeaver,
+                            SD.GCSEMathsAchievementID,
+                            SD.GCSEEnglishAchievementID,
+                            SD.PupilPremiumFundingEligibilityID,
+                            SD.HEFinTypeCash,
+                            SD.HEFinTypeNearCash,
+                            SD.HEFinTypeAccomDiscount,
+                            SD.HEFinTypeOther,
+                            SD.FreeMealsEligibilityID,
+                            SD.PupilPremiumFundingEligibility2ID,
+                            SD.HighNeedsStudent,
+                            SD.AdditionalBankID,
+                            SD.AdditionalBankBranchID,
+                            SD.AdditionalBankAccountNoEncrypted,
+                            SD.AdditionalBankAccountNameEncrypted,
+                            SD.ExcludeFromPlannedHoursCalculation,
+                            SD.YoungParent,
+                            SD.YoungCarer,
+                            SD.HasSpecialEducationNeeds,
+                            SD.GCSEEnglishQualificationGrade,
+                            SD.GCSEMathsQualificationGrade,
+                            SD.HouseholdSituation1ID,
+                            SD.HouseholdSituation2ID,
+                            SD.LearningDiffOrDisID,
+                            SD.GCSEMathsConditionOfFundingID,
+                            SD.GCSEEnglishConditionOfFundingID,
+                            SD.AchievedEnglishGCSEByEndOfYear11,
+                            SD.AchievedMathsGCSEByEndOfYear11,
+                            SD.UserDefined31,
+                            SD.UserDefined32,
+                            SD.UserDefined33,
+                            SD.UserDefined34,
+                            SD.UserDefined35,
+                            SD.UserDefined36,
+                            SD.UserDefined37,
+                            SD.UserDefined38,
+                            SD.UserDefined39,
+                            SD.UserDefined40,
+                            SD.UserDefined41,
+                            SD.UserDefined42,
+                            SD.UserDefined43,
+                            SD.UserDefined44,
+                            SD.UserDefined45,
+                            SD.GiftedAndTalented,
+                            SD.ALSDeclined,
+                            SD.UCASPersonalID,
+                            SD.PreMergerLearningProviderID,
+                            SD.UserDefinedDataProtection1,
+                            SD.UserDefinedDataProtection2,
+                            SD.UserDefinedDataProtection3,
+                            SD.UserDefinedDataProtection4,
+                            SD.UserDefinedDataProtection5,
+                            SD.UserDefinedDataProtection6,
+                            SD.UserDefinedDataProtection7,
+                            SD.UserDefinedDataProtection8,
+                            SD.UserDefinedDataProtection9,
+                            SD.UserDefinedDataProtection10,
+                            SD.UserDefinedDataProtection11,
+                            SD.UserDefinedDataProtection12,
+                            SD.UserDefinedDataProtection13,
+                            SD.UserDefinedDataProtection14,
+                            SD.UserDefinedDataProtection15,
+                            SD.CampusIdentifier,
+                            SD.OTJHours,
+                            SD.HasConsentGiven,
+                            SD.ConsentGivenDate,
+                            SD.AcceptMarketingConsent,
+                            SD.AcceptShareInfoConsent,
+                            SD.EffectiveDate,
+                            SD.ContactedBy,
+                            SD.GDPRNotes,
+                            SD.CanBeContactBySMS,
+                            SD.CanBeContactBySocialMedia,
+                            SD.CanBeSharedByEmail,
+                            SD.CanBeSharedByWebSite,
+                            SD.CanBeSharedBySocialMedia,
+                            SD.GDPRAllowContactByPhone,
+                            SD.GDPRAllowContactByPost,
+                            SD.GDPRAllowContactByEmail,
+                            RowNum = 
+                                ROW_NUMBER () OVER (
+                                    PARTITION BY
+                                        SD.RefNo
+                                    ORDER BY
+                                        SD.AcademicYearID DESC
+                                )
+                        FROM ' + @System + '.dbo.StudentDetail SD
+                        WHERE
+                            SD.RefNo = @StudentRef
+                    ) SD
+                    WHERE
+                        SD.RowNum = 1';
+
+                SET @SQLParams = 
+                    N'@AcademicYear NVARCHAR(5),
+                    @StudentRef NVARCHAR(50),
+                    @Username NVARCHAR(200)';
+
+                INSERT INTO @StudentDetailInserted
+                EXECUTE sp_executesql 
+                    @SQLString, 
+                    @SQLParams,  
+                    @AcademicYear = @AcademicYear,
+                    @StudentRef = @StudentRef,
+                    @Username = @Username; 
+
+                SET @StudentDetailID = (SELECT SDI.StudentDetailID FROM @StudentDetailInserted SDI)
+            END
+
+            IF @StudentDetailID IS NULL
+                BEGIN
+                    SET @ErrorMsg = 'Unable to determine Student Detail ID in Academic Year ' + @AcademicYear;
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END
+
+            /*Check if an application or enrolment for this course already exists*/
+            SET @SQLString = 
+                N'SELECT 
+                    @CourseCodeOUT = CRS.Code
+                FROM ' + @System + '.dbo.Offering CRS
+                INNER JOIN ' + @System + '.dbo.Enrolment ENR
+                    ON ENR.OfferingID = CRS.OfferingID
+                WHERE
+                    CRS.AcademicYearID = @AcademicYear
+                    AND ENR.StudentDetailID = @StudentDetailID
+                    AND CRS.OfferingID = @CourseToID';
+
+            SET @SQLParams = 
+                N'@AcademicYear NVARCHAR(5),
+                @StudentDetailID INT,
+                @CourseToID INT,
+                @CourseCodeOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,  
+                @AcademicYear = @AcademicYear,
+                @StudentDetailID = @StudentDetailID,
+                @CourseToID = @CourseToID,
+                @CourseCodeOUT = @CourseCode OUTPUT; 
+            
+            IF @CourseCode IS NOT NULL
+                BEGIN
+                    SET @ErrorMsg = 'Learner is already enrolled to ' + @CourseCode
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END
+
+            SET @SQLString = 
+                N'SELECT 
+                    @CourseCodeOUT = CRS.Code
+                FROM ' + @System + '.dbo.Offering CRS
+                INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC
+                    ON APPC.OfferingID = CRS.OfferingID
+                INNER JOIN ' + @System + '.dbo.Application APP
+                    ON APP.ApplicationID = APPC.ApplicationID
+                WHERE
+                    CRS.AcademicYearID = @AcademicYear
+                    AND APP.StudentDetailID = @StudentDetailID
+                    AND CRS.OfferingID = @CourseToID';
+
+            SET @SQLParams = 
+                N'@AcademicYear NVARCHAR(5),
+                @StudentDetailID INT,
+                @CourseToID INT,
+                @CourseCodeOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,  
+                @AcademicYear = @AcademicYear,
+                @StudentDetailID = @StudentDetailID,
+                @CourseToID = @CourseToID,
+                @CourseCodeOUT = @CourseCode OUTPUT; 
+        
+            IF @CourseCode IS NOT NULL
+                BEGIN
+                    SET @ErrorMsg = 'Learner has already applied to ' + @CourseCode + ' in Academic Year ' + @AcademicYear;
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END
+
+            /*Now create the application if one does not already exist*/
+            DECLARE @ApplicationInserted TABLE (
+                ApplicationID INT,
+                SID INT
+            )
+
+            SET @SQLString = 
+                N'INSERT INTO ' + @System + '.dbo.Application
+                (
+                    SID,
+                    Choice,
+                    CreatedBy,
+                    CreatedDate,
+                    ApplicationDate,
+                    ApplicationTypeID,
+                    StudentDetailID,
+                    OfferID,
+                    OfferDate,
+                    DecisionID,
+                    DecisionDate,
+                    Condition,
+                    CollegeDecisionID,
+                    CollegeDecisionDate,
+                    UserDefined1
+                )
+                --OUTPUT INSERTED.ApplicationID, INSERTED.SID INTO @ApplicationInserted
+                OUTPUT INSERTED.ApplicationID, INSERTED.SID
+                SELECT
+                    SID = CRS.SID,
+                    Choice = COALESCE ( APP.Choice, 0 ) + 1,
+                    CreatedBy = @Username,
+                    CreatedDate = GETDATE(),
+                    ApplicationDate = GETDATE(),
+                    ApplicationTypeID = @ApplicationTypeID,
+                    StudentDetailID = SD.StudentDetailID,
+                    OfferID = @OfferTypeID,
+                    OfferDate = GETDATE(),
+                    DecisionID = @ApplicationDecisionID,
+                    DecisionDate = GETDATE(),
+                    Condition = @OfferConditionDesc,
+                    CollegeDecisionID = @CollegeDecisionID,
+                    CollegeDecisionDate = GETDATE(),
+                    UserDefined1 = 
+                        CASE
+                            WHEN @ProgressionType = ''INTERNAL'' THEN NULL
+                            WHEN SD.Email IS NULL THEN ''Yes''
+                            ELSE ''No''
+                        END
+                FROM ' + @System + '.dbo.StudentDetail SD
+                INNER JOIN ' + @System + '.dbo.Offering CRS
+                    ON CRS.OfferingID = @CourseToID
+                    AND CRS.AcademicYearID = @AcademicYear
+                LEFT JOIN (
+                    SELECT
+                        APP.StudentDetailID,
+                        Choice = MAX ( APP.Choice )
+                    FROM ' + @System + '.dbo.Application APP
+                    GROUP BY
+                        APP.StudentDetailID
+                ) APP
+                    ON APP.StudentDetailID = SD.StudentDetailID
+                WHERE  
+                    SD.RefNo = @StudentRef
+                    AND SD.AcademicYearID = @AcademicYear
+                    AND SD.StudentDetailID = @StudentDetailID';
+
+            SET @SQLParams = 
+                N'@AcademicYear NVARCHAR(5),
+                @StudentRef NVARCHAR(50),
+                @StudentDetailID INT,
+                @CourseToID INT,
+                @ApplicationTypeID INT,
+                @OfferTypeID INT,
+                @OfferConditionID INT,
+                @OfferConditionDesc NVARCHAR(MAX),
+                @ApplicationDecisionID INT,
+                @CollegeDecisionID INT,
+                @ProgressionType NVARCHAR(20),
+                @Username NVARCHAR(200),
+                @CourseCodeOUT INT OUTPUT';
+
+            INSERT INTO @ApplicationInserted
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,  
+                @AcademicYear = @AcademicYear,
+                @StudentRef = @StudentRef,
+                @StudentDetailID = @StudentDetailID,
+                @CourseToID = @CourseToID,
+                @ApplicationTypeID = @ApplicationTypeID,
+                @OfferTypeID = @OfferTypeID,
+                @OfferConditionID = @OfferConditionID,
+                @OfferConditionDesc = @OfferConditionDesc,
+                @ApplicationDecisionID = @ApplicationDecisionID,
+                @CollegeDecisionID = @CollegeDecisionID,
+                @ProgressionType = @ProgressionType,
+                @Username = @Username,
+                @CourseCodeOUT = @CourseCode OUTPUT; 
+
+            DECLARE @ApplicationID INT;
+            DECLARE @ActivityCode VARCHAR(50);
+            DECLARE @SID INT;
+
+            SELECT 
+                @ApplicationID = APP.ApplicationID,
+                @ActivityCode = FORMAT ( APP.ApplicationID, 'PInterview000009999#0000000000'),
+                @SID = APP.SID
+            FROM @ApplicationInserted APP
+
+            IF @ApplicationID IS NULL 
+            BEGIN
+                SET @ErrorMsg = 'Unable to add the application against ' + @CourseCode + ' in Academic Year ' + @AcademicYear;
+                RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+            END
+
+            SET @SQLString = 
+                N'INSERT INTO ' + @System + '.dbo.ApplicationCourse
+                (
+                    ApplicationID,
+                    OfferingID,
+                    OfferingGroupID,
+                    CreatedBy,
+                    CreatedDate
+                )
+                SELECT
+                    ApplicationID = @ApplicationID,
+                    OfferingID = @CourseToID,
+                    OfferingGroupID = 
+                        CASE
+                            WHEN @GroupToID = 0 THEN NULL 
+                            ELSE @GroupToID
+                        END,
+                    CreatedBy = @Username,
+                    CreatedDate = GETDATE()';
+
+            SET @SQLParams = 
+                N'@ApplicationID INT,
+                @CourseToID INT,
+                @GroupToID INT,
+                @Username NVARCHAR(200)';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,  
+                @ApplicationID = @ApplicationID,
+                @CourseToID = @CourseToID,
+                @GroupToID = @GroupToID,
+                @Username = @Username; 
+
+            /*Now create the interview*/
+            DECLARE @ActivityTypeID INT
+
+            SET @SQLString = 
+                N'SELECT TOP 1 
+                    @ActivityTypeIDOUT = ACTT.ActivityTypeID 
+                FROM ' + @System + '.dbo.TT_ActivityType ACTT 
+                WHERE 
+                    ACTT.Name = ''Interview''';
+
+            SET @SQLParams = 
+                N'@ActivityTypeIDOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,  
+                @ActivityTypeIDOUT = @ActivityTypeID OUTPUT;
+
+            /*Ensure activity with this code does not already exist*/
+            DECLARE @ActivityIDCheck INT
+            SET @SQLString = 
+                N'SELECT 
+                    @ActivityIDCheckOUT = ACT.ActivityID 
+                FROM ' + @System + '.dbo.TT_Activity ACT 
+                WHERE 
+                    ACT.Code = @ActivityCode';
+
+            SET @SQLParams = 
+                N'@ActivityCode VARCHAR(50),
+                @ActivityIDCheckOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @ActivityCode = @ActivityCode,
+                @ActivityIDCheckOUT = @ActivityIDCheck OUTPUT;
+
+            IF @ActivityIDCheck IS NOT NULL
+            BEGIN
+                SET @ErrorMsg = 'Unable to add register activity with code "' + @ActivityCode + '" in Academic Year ' + @AcademicYear + ' as it already exists';
+                RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+            END
+
+            DECLARE @TT_ActivityInserted TABLE (
+                ActivityID INT
+            )
+
+            SET @SQLString = 
+                N'INSERT INTO ' + @System + '.dbo.TT_Activity
+                (
+                    ActivityTypeID,
+                    Code,
+                    Description,
+                    PeriodID,
+                    SID,
+                    CreatedBy,
+                    CreatedDate
+                )
+                OUTPUT INSERTED.ActivityID
+                SELECT
+                    ActivityTypeID = @ActivityTypeID,
+                    Code = @ActivityCode,
+                    Description = ''Interview with ('' + @StudentRef + '') '' + @Username,
+                    PeriodID = ''20'' + LEFT ( @AcademicYear, 2 ),
+                    SID = @SID,
+                    CreatedBy = @Username,
+                    CreatedDate = GETDATE()';
+
+            SET @SQLParams = 
+                N'@AcademicYear NVARCHAR(5),
+                @StudentRef NVARCHAR(50),
+                @ActivityCode VARCHAR(50),
+                @ActivityTypeID INT,
+                @SID INT,
+                @Username NVARCHAR(200)';
+
+            INSERT INTO @TT_ActivityInserted
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,  
+                @AcademicYear = @AcademicYear,
+                @StudentRef = @StudentRef,
+                @ActivityCode = @ActivityCode,
+                @ActivityTypeID = @ActivityTypeID,
+                @SID = @SID,
+                @Username = @Username; 
+
+            DECLARE @ActivityID INT = (SELECT ACT.ActivityID FROM @TT_ActivityInserted ACT)
+
+            IF @ActivityID IS NULL 
+            BEGIN
+                SET @ErrorMsg = 'Unable to add register activity with code "' + @ActivityCode + '" in Academic Year ' + @AcademicYear;
+                RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+            END
+
+            DECLARE @TT_ActivityOccurrenceInserted TABLE (
+                ActivityOccurrenceID INT
+            )
+
+            SET @SQLString = 
+                N'INSERT INTO ' + @System + '.dbo.TT_ActivityOccurrence
+                (
+                    ActivityID,
+                    StartTime,
+                    EndTime,
+                    Notes,
+                    CreatedBy,
+                    CreatedDate
+                )
+                OUTPUT INSERTED.ActivityOccurrenceID
+                SELECT
+                    ActivityID = @ActivityID,
+                    StartTime = GETDATE(),
+                    EndTime = GETDATE(),
+                    Notes = NULL,
+                    CreatedBy = @Username,
+                    CreatedDate = GETDATE()';
+
+            SET @SQLParams = 
+                N'@ActivityID INT,
+                @Username NVARCHAR(200)';
+
+            INSERT INTO @TT_ActivityOccurrenceInserted
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,  
+                @ActivityID = @ActivityID,
+                @Username = @Username; 
+
+            DECLARE @ActivityOccurrenceID INT = (SELECT ACTO.ActivityOccurrenceID FROM @TT_ActivityOccurrenceInserted ACTO)
+
+            IF @ActivityOccurrenceID IS NULL 
+            BEGIN
+                SET @ErrorMsg = 'Unable to add register activity occurrence for activity ID "' + CAST ( @ActivityID AS VARCHAR(20) ) + '" in Academic Year ' + @AcademicYear;
+                RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+            END
+
+            DECLARE @TimetabledResourceIDCheck INT
+            SET @SQLString = 
+                N'SELECT 
+                    @TimetabledResourceIDCheckOUT = TTR.TimetabledResourceID 
+                FROM ' + @System + '.dbo.TT_TimetabledResource TTR 
+                WHERE 
+                    TTR.ActivityOccurrenceID = @ActivityOccurrenceID
+                    AND TTR.ResourceID = @StaffID
+                    AND TTR.ResourceTypeID = 1';
+
+            SET @SQLParams = 
+                N'@ActivityOccurrenceID INT,
+                @StaffID INT,
+                @TimetabledResourceIDCheckOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @ActivityOccurrenceID = @ActivityOccurrenceID,
+                @StaffID = @StaffID,
+                @TimetabledResourceIDCheckOUT = @TimetabledResourceIDCheck OUTPUT;
+
+            IF @TimetabledResourceIDCheck IS NOT NULL
+            BEGIN
+                SET @ErrorMsg = 'Unable to attach staff member to register occurrence "' + @ActivityCode + '" in Academic Year ' + @AcademicYear + ' as it already exists';
+                RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+            END
+            
+            SET @SQLString = 
+                N'INSERT INTO ' + @System + '.dbo.TT_TimetabledResource
+                (
+                    ActivityOccurrenceID,
+                    ResourceTypeID,
+                    ResourceID,
+                    IgnoreClashes,
+                    CreatedBy,
+                    CreatedDate,
+                    MigrationID
+                )
+                SELECT
+                    ActivityOccurrenceID = @ActivityOccurrenceID,
+                    ResourceTypeID = 1, --Staff
+                    ResourceID = @StaffID,
+                    IgnoreClashes = 1,
+                    CreatedBy = @Username,
+                    CreatedDate = GETDATE(),
+                    MigrationID = ''WLC Progressions System''';
+            
+            SET @SQLParams = 
+                N'@ActivityOccurrenceID INT,
+                @StaffID INT,
+                @Username NVARCHAR(200)';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @ActivityOccurrenceID = @ActivityOccurrenceID,
+                @StaffID = @StaffID,
+                @Username = @Username;
+
+            /*Ensure interview does not already exist*/
+            DECLARE @InterviewIDCheck INT
+            SET @SQLString = 
+                N'SELECT 
+                    @InterviewIDCheckOUT = IV.InterviewID 
+                FROM ' + @System + '.dbo.Interview IV 
+                WHERE 
+                    IV.ApplicationID = @ApplicationID
+                    AND IV.ActivityID = @ActivityID';
+            
+            SET @SQLParams = 
+                N'@ApplicationID INT,
+                @ActivityID INT,
+                @InterviewIDCheckOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @ApplicationID = @ApplicationID,
+                @ActivityID = @ActivityID,
+                @InterviewIDCheckOUT = @InterviewIDCheck OUTPUT;
+
+            IF @InterviewIDCheck IS NOT NULL
+            BEGIN
+                SET @ErrorMsg = 'Unable to attach staff member to register occurrence "' + @ActivityCode + '" in Academic Year ' + @AcademicYear + 'as it already exists'
+                RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+            END
+
+            DECLARE @SiteID INT
+            SET @SQLString = 
+                N'SELECT TOP 1 
+                    @SiteIDOUT = CRS.SiteID 
+                FROM ' + @System + '.dbo.Offering CRS 
+                WHERE 
+                    CRS.OfferingID = @CourseToID 
+                    AND CRS.AcademicYearID = @AcademicYear';
+
+            SET @SQLParams = 
+                N'@AcademicYear NVARCHAR(5),
+                @CourseToID INT,
+                @SiteIDOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,
+                @AcademicYear = @AcademicYear,
+                @CourseToID = @CourseToID,
+                @SiteIDOUT = @SiteID OUTPUT;
+
+            SET @SQLString = 
+                N'INSERT INTO ' + @System + '.dbo.Interview
+                (
+                    ApplicationID,
+                    SiteID,
+                    InterviewAttendanceID,
+                    Notes,
+                    InterviewTypeID,
+                    ActivityID,
+                    CreatedBy,
+                    CreatedDate
+                )
+                SELECT
+                    ApplicationID = @ApplicationID,
+                    SiteID = @SiteID,
+                    InterviewAttendanceID = 6,
+                    Notes = NULL,
+                    InterviewTypeID = @InterviewTypeID,
+                    ActivityID = @ActivityID,
+                    CreatedBy = @Username,
+                    CreatedDate = GETDATE()';
+            
+            SET @SQLParams = 
+                N'@ApplicationID INT,
+                @ActivityID INT,
+                @InterviewTypeID INT,
+                @SiteID INT,
+                @Username NVARCHAR(200)';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,
+                @ApplicationID = @ApplicationID,
+                @ActivityID = @ActivityID,
+                @InterviewTypeID = @InterviewTypeID,
+                @SiteID = @SiteID,
+                @Username = @Username;
+
+        COMMIT TRANSACTION AddProgression
+    END TRY
+
+    BEGIN CATCH
+        ROLLBACK TRANSACTION AddProgression
+
+        DECLARE @ErrorMessage NVARCHAR(4000);  
+        DECLARE @ErrorSeverity INT;  
+        DECLARE @ErrorState INT;  
+    
+        SELECT   
+            @ErrorMessage = ERROR_MESSAGE(),  
+            @ErrorSeverity = ERROR_SEVERITY(),  
+            @ErrorState = ERROR_STATE();  
+
+        RAISERROR (@ErrorMessage,
+                @ErrorSeverity,
+                @ErrorState
+                );  
+    END CATCH
+END

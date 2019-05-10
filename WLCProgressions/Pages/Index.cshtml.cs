@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using WLCProgressions.Models;
 using WLCProgressions.Shared;
 
@@ -15,10 +16,12 @@ namespace WLCProgressions.Pages
     public class IndexModel : PageModel
     {
         private readonly WLCProgressions.Data.ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public IndexModel(WLCProgressions.Data.ApplicationDbContext context)
+        public IndexModel(WLCProgressions.Data.ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         public IList<SelectListData> AcademicYearData { get; set; }
@@ -34,7 +37,7 @@ namespace WLCProgressions.Pages
         {
             string defaultAcademicYear = await AcademicYearFunctions.GetDefaultAcademicYear(_context);
 
-            string systemDB = DatabaseSelector.GetDatabase(system);
+            string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
             var systemParam = new SqlParameter("@System", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
             var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);

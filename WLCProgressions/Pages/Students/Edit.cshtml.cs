@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using WLCProgressions.Models;
 using WLCProgressions.Shared;
 
@@ -15,10 +16,12 @@ namespace WLCProgressions.Pages.Students
     public class EditModel : PageModel
     {
         private readonly WLCProgressions.Data.ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public EditModel(WLCProgressions.Data.ApplicationDbContext context)
+        public EditModel(WLCProgressions.Data.ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         [BindProperty]
@@ -32,7 +35,7 @@ namespace WLCProgressions.Pages.Students
             }
 
             //Student = await _context.Student.FirstOrDefaultAsync(m => m.StudentRef == id);
-            string systemDB = DatabaseSelector.GetDatabase(system);
+            string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
             var systemParam = new SqlParameter("@system", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(AcademicYear, _context);
             var AcademicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
