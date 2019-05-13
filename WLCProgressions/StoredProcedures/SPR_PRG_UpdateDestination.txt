@@ -7,8 +7,11 @@ CREATE PROCEDURE [dbo].[SPR_PRG_UpdateDestination]
 AS
 BEGIN
 	SET NOCOUNT ON;
-    -- DECLARE @StudentRef VARCHAR(50) = '11000000'
-    -- DECLARE @Destination int = 27
+    -- DECLARE @System NVARCHAR(50) = 'ProSolutionTraining';
+    -- DECLARE @AcademicYear NVARCHAR(5) = '18/19'
+    -- DECLARE @Username NVARCHAR(200) = 'r.wilson'
+    -- DECLARE @StudentRef VARCHAR(50) = '11033452'
+    -- DECLARE @Destination INT = NULL
 
     DECLARE @SQLString NVARCHAR(MAX);
     DECLARE @SQLParams NVARCHAR(MAX);
@@ -18,11 +21,24 @@ BEGIN
     DECLARE @DestinationDescription NVARCHAR(255) = '';
     DECLARE @ErrorMsg NVARCHAR(255) = '';
 
+    --Override academic year so destination record would be recorded in current year up to R14 ILR Return - requested by Andrea
+    --Still waiting for confirmation this is correct approach
+    SET @AcademicYear = 
+        ( 
+            SELECT
+                AcademicYear = 
+                    CASE 
+                        WHEN MONTH ( GETDATE() ) >= 10 THEN CAST ( YEAR ( GETDATE() ) - 2000 AS NVARCHAR(2) ) + '/' + CAST ( YEAR ( GETDATE() ) - 1999 AS NVARCHAR(2) )
+                        ELSE CAST ( YEAR ( GETDATE() ) - 2001 AS NVARCHAR(2) ) + '/' + CAST ( YEAR ( GETDATE() ) - 2000 AS NVARCHAR(2) )
+                    END 
+        )
+
     --Default destination to 44 if not set (Other FE* (Full-Time))
     -- IF @Destination IS NULL
     --     SET @Destination = 44
 
     IF @Destination IS NOT NULL
+        
         BEGIN
             SET @SQLString = 
                 N'SELECT
@@ -62,6 +78,10 @@ BEGIN
             -- DECLARE @DestinationCode VARCHAR(50) = '';
             -- DECLARE @DestinationDescription VARCHAR(255) = '';
             
+            DECLARE @AuditRecordInserted TABLE (
+                AuditTrailID INT
+            )
+
             SET @SQLString = 
                 N'INSERT INTO ' + @System + '.dbo._CCC_AuditTrail 
                 (
@@ -73,11 +93,12 @@ BEGIN
                     ModifiedBy,
                     ModifiedOn
                 )
+                OUTPUT INSERTED.AuditTrailID
                 SELECT
                     TableName = ''StudentDetail'',
                     WhereClause = ''[StudentDetailID] = '' + CAST ( SD.StudentDetailID AS VARCHAR(50) ),
                     RowDescription = SD.Surname + '' , '' + SD.FirstForename + '' ('' + RTRIM ( SD.RefNo ) + ''), '' + CAST ( CAST ( FLOOR ( DATEDIFF ( DAY, COALESCE ( SD.DateOfBirth, CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ), CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ) / 365.23076923074 ) AS int ) AS VARCHAR(50) ) + '', '' + SD.AcademicYearID,
-                    ChangeInfo = ''Record Updated: LocalDestinationID: Changed from '''''' + COALESCE ( CAST ( SD.LocalDestinationID AS VARCHAR(50) ), '''' ) + '''''' ('' + RTRIM ( DES.Code ) + '' - '' + DES.Description + '') to '''''' + CAST ( @Destination AS VARCHAR(50) ) + '''''' ('' + @DestinationCode + '' - '' + @DestinationDescription + '''''')'',
+                    ChangeInfo = ''Record Updated: LocalDestinationID: Changed from '''''' + COALESCE ( CAST ( SD.LocalDestinationID AS VARCHAR(50) ), '''' ) + '''''' ('' + COALESCE ( RTRIM ( DES.Code ), '''' ) + '' - '' + COALESCE ( DES.Description, '''' ) + '') to '''''' + COALESCE ( CAST ( @Destination AS VARCHAR(50) ), '''' ) + '''''' ('' + COALESCE ( @DestinationCode, '''' ) + '' - '' + COALESCE ( @DestinationDescription, '''' ) + '''''')'',
                     ChangeType = 2,
                     ModifiedBy = @Username,
                     ModifiedOn = GETDATE()
@@ -97,6 +118,7 @@ BEGIN
                 @DestinationDescription NVARCHAR(255),
                 @Username NVARCHAR(200)';
 
+            INSERT INTO @AuditRecordInserted
             EXECUTE sp_executesql 
                 @SQLString, 
                 @SQLParams, 
@@ -108,21 +130,23 @@ BEGIN
                 @DestinationDescription = @DestinationDescription,
                 @Username = @Username;
 
-            IF @@ROWCOUNT <> 1
+            DECLARE @AuditTrailID INT = (SELECT AuditTrailID FROM @AuditRecordInserted)
+
+            IF @AuditTrailID IS NULL
                 BEGIN
-                    SET @ErrorMsg = CAST ( @Destination AS VARCHAR(10) ) + ' is not a valid destination code in ' + @System + ' system';
+                    SET @ErrorMsg = COALESCE ( CAST ( @Destination AS VARCHAR(10) ), '' ) + ' is not a valid destination code in ' + @System + ' system';
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
             ELSE
                 BEGIN
-                    --Update local destination (in previous year Student Detail Record)
+                    --Update local destination (in Student Detail Record)
                     SET @SQLString = 
                         N'UPDATE SD
                         SET
                             SD.LocalDestinationID = @Destination
                         FROM ' + @System + '.dbo.StudentDetail SD
                         WHERE
-                            SD.AcademicYearID = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) - 1 AS VARCHAR(2) ) + ''/'' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) - 1 AS VARCHAR(2) )
+                            SD.AcademicYearID = @AcademicYear
                             AND SD.RefNo = @StudentRef';
 
                     SET @SQLParams = 

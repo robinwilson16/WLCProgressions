@@ -103,6 +103,12 @@ $(".ProgressLearnerButton").click(function (event) {
 
     let currentFacCode = $("#CurrentFacCode").val();
     let currentTeamCode = $("#CurrentTeamCode").val();
+    let isDestinationsButtonDisabled = $("#SaveDestinationButton").hasClass("disabled");
+    let unsavedDestinationsExist = false;
+
+    if (isDestinationsButtonDisabled === false) {
+        unsavedDestinationsExist = true;
+    }
 
     if ($(this).hasClass("ProgressWithinFac")) {
         $('#ProgressWithinFac').val("Y");
@@ -137,7 +143,29 @@ $(".ProgressLearnerButton").click(function (event) {
 
         //Ensure at least 1 learner was selected
         if (numProgressingStudents > 0) {
-            $('#ProgressionModal').modal();
+            let saveChanges = $("#QuestionModalAnswerID").val();
+
+            //First confirm if user wants to save changes to destinations if not already selected option
+            if (unsavedDestinationsExist === true && saveChanges === "") {
+                doQuestionModal("Unsaved Changes Exist", "Would you like to save your changes to learner destinations (selecting no will discard these)?");
+            }
+            else if (saveChanges === "Y") {
+                $(".SaveDestinationButton").trigger("click");
+                $('#ProgressionModal').modal();
+            }
+            else if (saveChanges === "N") {
+                $('#ProgressionModal').modal();
+            }
+            else if (saveChanges === "C") {
+                //Do nothing
+            }
+            else {
+                //If no destinations set then is not asked question so should default to proceed
+                $('#ProgressionModal').modal();
+            }
+
+            //Reset modal answer
+            $("#QuestionModalAnswerID").val("");
         }
         else {
             doModal("No Students Selected", "Please select one or more students to progress.");
@@ -172,6 +200,18 @@ $("#ProgressionModal").on("hidden.bs.modal", function () {
     //Load courses for current year
     loadAllCourses(system, academicYear);
 });
+
+function doQuestionModalAction() {
+    //If asked a question about saving destinations then need to return to progressions screen again
+    let progressWithinFac = $('#ProgressWithinFac').val();
+
+    if (progressWithinFac === "Y") {
+        $("#ProgressWithinTeam").trigger("click");
+    }
+    else {
+        $("#ProgressAnotherTeam").trigger("click");
+    }
+}
 
 function cancelProgression() {
     $("#CourseSearchToBox").val("");
@@ -282,6 +322,34 @@ $(".SaveProgressionButton").click(function (event) {
             <ul>
                 ${errors}
             </ul>`;
+
+        doModal("Please Review Your Selection", errors);
+    }
+});
+
+$(".SaveDestinationButton").click(function (event) {
+    let system = $("#SystemID").val();
+    let academicYear = $("#AcademicYearID").val();
+    let progressionYear = $("#ProgressionYearID").val();
+    let students = JSON.parse(localStorage.getItem("students"));
+    let courseFromID = $("#ProgressFromCourseID").val();
+
+    isButtonDisabled = $(this).hasClass("disabled");
+
+    if (isButtonDisabled === false) {
+        saveDestinations(system, progressionYear, students);
+    }
+    else {
+        //If user has missed something
+        let errors = "";
+
+        if (courseFromID === "") {
+            errors = `
+                Course to progress the learners to has not been chosen. Please search for, and pick a course from above`;
+        }
+        else {
+            errors = `There are no destinations to save. Please amend one or more destinations first.`;
+        }
 
         doModal("Please Review Your Selection", errors);
     }

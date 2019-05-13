@@ -13,6 +13,17 @@ BEGIN
     -- DECLARE @CourseID int = 23799
 	-- DECLARE @GroupID int = 27244
 
+    DECLARE @DestinationYear NVARCHAR(5)
+    SET @DestinationYear = 
+        ( 
+            SELECT
+                AcademicYear = 
+                    CASE 
+                        WHEN MONTH ( GETDATE() ) >= 10 THEN CAST ( YEAR ( GETDATE() ) - 2000 AS NVARCHAR(2) ) + '/' + CAST ( YEAR ( GETDATE() ) - 1999 AS NVARCHAR(2) )
+                        ELSE CAST ( YEAR ( GETDATE() ) - 2001 AS NVARCHAR(2) ) + '/' + CAST ( YEAR ( GETDATE() ) - 2000 AS NVARCHAR(2) )
+                    END 
+        )
+
     DECLARE @SQLString NVARCHAR(MAX);
     DECLARE @SQLParams NVARCHAR(MAX);
 
@@ -35,12 +46,17 @@ BEGIN
         ClassesNeutral = COALESCE ( ATT.Neutral, 0 ),
         ClassesAuthAbsence = COALESCE ( ATT.AuthAbsence, 0 ),
         ClassesLate = COALESCE ( ATT.Late, 0 ),
-        AttendPer = COALESCE ( ATT.AttendPer, 0 ),
+        AttendPer = CAST ( COALESCE ( ATT.AttendPer, 0 ) AS FLOAT ),
         RiskCode = COALESCE ( RSK.RiskCode, 0 ),
         RiskName = COALESCE ( RSK.RiskName, ''No Risk''),
         RiskColour = COALESCE ( RSK.RiskColour, ''Green'' ),
+		NumAppsNextYear = COALESCE ( NYA.NumApps, 0 ),
+        AppliedCoursesNextYear = NYA.Courses,
+        NumEnrolsNextYear = COALESCE ( NYE.NumEnrols, 0 ),
+        EnrolledCoursesNextYear = NYE.Courses,
         DestinationCode = SD.LocalDestinationID,
         DestinationName = DES.Description,
+        DestinationChanged = CAST ( 0 AS bit ),
 		ProgressLearner = CAST ( 0 AS bit )
 	FROM ' + @System + '.dbo.StudentDetail SD
 	INNER JOIN ' + @System + '.dbo.Enrolment ENR
@@ -65,7 +81,7 @@ BEGIN
                 )
         FROM ' + @System + '.dbo.StudentOutcome OC
         WHERE
-            OC.ReturnYearID = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + ''/'' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
+            OC.ReturnYearID = @DestinationYear
     ) OC
         ON OC.StudentID = SD.StudentID
         AND OC.RowNum = 1
@@ -160,6 +176,90 @@ BEGIN
     ) RSK
         ON RSK.StudentRef = SD.RefNo
         AND RSK.CourseCode = CRS.Code
+	LEFT JOIN (
+		SELECT 
+			SD.AcademicYearID,
+			SD.StudentID,
+			SD.StudentDetailID,
+			NumApps = COUNT ( CRS.OfferingID ),
+			Courses = 
+				STUFF (
+					(
+						SELECT
+							'', '' + CRS2.Code + '' - '' + CRS2.Name
+						FROM ' + @System + '.dbo.Offering CRS2
+						INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC2
+							ON APPC2.OfferingID = CRS2.OfferingID
+						INNER JOIN ' + @System + '.dbo.Application APP2
+							ON APP2.ApplicationID = APPC2.ApplicationID
+						WHERE
+							CRS2.AcademicYearID = SD.AcademicYearID
+							AND APP2.StudentDetailID = SD.StudentDetailID
+							AND COALESCE ( APP2.CollegeDecisionID, 1 ) <> 0
+							AND COALESCE ( APP2.DecisionID, 1 ) = 1
+						ORDER BY
+							'', '' + CRS2.Code + '' - '' + CRS2.Name FOR XML PATH(''''),
+							TYPE
+					).value(''.'',''varchar(max)''), 1, 2, ''''
+				)
+		FROM ' + @System + '.dbo.StudentDetail SD
+		INNER JOIN ' + @System + '.dbo.Application APP
+			ON APP.StudentDetailID = SD.StudentDetailID
+		INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC
+			ON APPC.ApplicationID = APP.ApplicationID
+		INNER JOIN ' + @System + '.dbo.Offering CRS
+			ON CRS.OfferingID = APPC.OfferingID
+		WHERE
+			SD.AcademicYearID = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + ''/'' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
+			AND COALESCE ( APP.CollegeDecisionID, 1 ) <> 0
+			AND COALESCE ( APP.DecisionID, 1 ) = 1
+		GROUP BY
+			SD.AcademicYearID,
+			SD.StudentID,
+			SD.StudentDetailID
+	) NYA
+        ON NYA.StudentID = SD.StudentID
+	'
+
+    SET @SQLString += 
+        N'
+    LEFT JOIN (
+        SELECT 
+            SD.AcademicYearID,
+            SD.StudentID,
+			SD.StudentDetailID,
+            NumEnrols = COUNT ( CRS.OfferingID ),
+            Courses = 
+                STUFF (
+                    (
+                            SELECT
+                                '', '' + CRS2.Code + '' - '' + CRS2.Name
+                            FROM ' + @System + '.dbo.Offering CRS2
+                            INNER JOIN ' + @System + '.dbo.Enrolment ENR2
+                                ON ENR2.OfferingID = CRS2.OfferingID
+                            WHERE
+                                CRS2.AcademicYearID = SD.AcademicYearID
+								AND ENR2.StudentDetailID = SD.StudentDetailID
+								AND ENR2.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
+                            ORDER BY
+                                '', '' + CRS2.Code + '' - '' + CRS2.Name FOR XML PATH(''''),
+                                TYPE
+                    ).value(''.'',''varchar(max)''), 1, 2, ''''
+                )
+        FROM ' + @System + '.dbo.StudentDetail SD
+        INNER JOIN ' + @System + '.dbo.Enrolment ENR
+            ON ENR.StudentDetailID = SD.StudentDetailID
+        INNER JOIN ' + @System + '.dbo.Offering CRS
+            ON CRS.OfferingID = ENR.OfferingID
+        WHERE
+            SD.AcademicYearID = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + ''/'' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
+            AND ENR.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
+        GROUP BY
+            SD.AcademicYearID,
+            SD.StudentID,
+			SD.StudentDetailID
+    ) NYE
+        ON NYE.StudentID = SD.StudentID
 	WHERE
 		SD.AcademicYearID = @AcademicYear
 		AND ENR.CompletionStatusID IN ( ''1'', ''2'' )
@@ -174,6 +274,7 @@ BEGIN
         N'@System NVARCHAR(50),
         @SystemILP NVARCHAR(50),
         @AcademicYear NVARCHAR(5),
+        @DestinationYear NVARCHAR(5),
         @CourseID int,
 	    @GroupID int';
     
@@ -182,7 +283,8 @@ BEGIN
         @SQLParams, 
         @System = @System, 
         @SystemILP = @SystemILP, 
-        @AcademicYear = @AcademicYear, 
+        @AcademicYear = @AcademicYear,
+        @DestinationYear = @DestinationYear, 
         @CourseID = @CourseID,
         @GroupID = @GroupID;
 

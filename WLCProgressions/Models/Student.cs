@@ -54,11 +54,20 @@ namespace WLCProgressions.Models
         [StringLength(20)]
         public string RiskColour { get; set; }
 
+        public int NumAppsNextYear { get; set; }
+
+        public string AppliedCoursesNextYear { get; set; }
+
+        public int NumEnrolsNextYear { get; set; }
+
+        public string EnrolledCoursesNextYear { get; set; }
+
         public int? DestinationCode { get; set; }
 
         [StringLength(255)]
         public string DestinationName { get; set; }
 
+        public bool DestinationChanged { get; set; }
         public bool ProgressLearner { get; set; }
     }
 }

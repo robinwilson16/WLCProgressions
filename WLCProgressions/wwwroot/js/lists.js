@@ -295,6 +295,7 @@ function listLoadedCourseFromFunctions() {
     $(".ProgressLearnersButton").click(function (event) {
         let system = $("#SystemID").val();
         let academicYear = $("#AcademicYearID").val();
+        let progressionYear = $("#ProgressionYearID").val();
 
         let facCode = $(this).attr("aria-describedby");
         let teamCode = $(this).attr("data-parent");
@@ -310,7 +311,7 @@ function listLoadedCourseFromFunctions() {
         $("#CurrentTeamCode").val(teamCode);
         $("#AcademicYearID").val(academicYear);
 
-        displayStudents(system, academicYear, courseID, groupID);
+        displayStudents(system, academicYear, progressionYear, courseID, groupID);
     });
 }
 
@@ -341,7 +342,7 @@ function listLoadedCourseToFunctions() {
     });
 }
 
-function displayStudents(system, academicYear, courseID, groupID) {
+function displayStudents(system, academicYear, progressionYear, courseID, groupID) {
     let dataToLoad = "";
 
     if (groupID <= 0) {
@@ -372,15 +373,16 @@ function displayStudents(system, academicYear, courseID, groupID) {
                 <table class="table table-sm table-hover">
                     <thead>
                         <tr>
-                            <th scope="col">Student Ref</th>                                
+                            <th scope="col">Student<br />Ref</th>                                
                             <th scope="col">Surname</th>
                             <th scope="col">Forename</th>
-                            <th scope="col">Age 31<sup>st</sup> Aug ${academicYear.substring(3, 5)}</th>
+                            <th scope="col">Age 31<sup>st</sup><br />Aug ${academicYear.substring(3, 5)}</th>
                             <th scope="col">Completion</th>
-                            <th scope="col">Attend %</th>
-                            <th scope="col">Risk</th>
-                            <th scope="col">Progress</th>
-                            <th scope="col">Destination</th>
+                            <th scope="col" class="text-center">Attend %</th>
+                            <th scope="col" class="text-center">Risk</th>
+                            <th scope="col" class="text-center">${progressionYear} Apps<br />and Enrols</th>
+                            <th scope="col" class="text-center">Progress</th>
+                            <th scope="col" class="text-center">Destination</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -413,16 +415,20 @@ function displayStudents(system, academicYear, courseID, groupID) {
                             <th scope="row">${students[student].studentRef}</th>
                             <td>${students[student].surname}</td>
                             <td>${students[student].forename}</td>
-                            <td>${students[student].age31stAug + 1}</td>
+                            <td class="text-center">${students[student].age31stAug + 1}</td>
                             <td>${students[student].completion}</td>
-                            <td>
+                            <td class="text-center">
                                 <div class="AttendPercent ${attendRate}">
                                     <div class="AttendValue">${+(attendPer * 100).toFixed(1)}%</div>
                                     <div class="AttendBar" style="width: ${attendPer * 100}%">
                                     </div>
                                 </div>
                             </td>
-                            <td><div class="RiskIndicator ${students[student].riskColour}"></div></td>
+                            <td class="text-center"><div class="RiskIndicator ${students[student].riskColour}"></div></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-outline-primary btn-sm"><i class="fas fa-envelope-open-text"></i> ${students[student].numAppsNextYear}</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm"><i class="fas fa-user-graduate"></i> ${students[student].numEnrolsNextYear}</button>
+                            </td>
                             <td class="text-center">
                                 <label class="switch-sm">
                                     <input type="checkbox" class="ProgressStudent" data-id="${students[student].studentRef}">
@@ -481,7 +487,7 @@ function listLoadedStudentFunctions() {
         recordProgressionJson(studentRef, progressStudent);
     });
 
-    $(".HasCompleted").click(function (event) {
+    $(".HasCompleted").change(function (event) {
         let system = $("#SystemID").val();
         let academicYear = $("#AcademicYearID").val();
         let progressionYear = $("#ProgressionYearID").val();
@@ -489,26 +495,41 @@ function listLoadedStudentFunctions() {
         let studentRef = $(this).attr("data-id");
         let notProgressing = $(this).prop("checked");
         let destinationSelectList = $("#DestinationOptionsSelectList-" + studentRef);
+        let destinationCode = destinationSelectList.val();
+        let destinationName = destinationSelectList.children("option:selected").text();
 
         if (notProgressing === true) {
             destinationSelectList.removeClass("d-none");
 
-            recordDestination(system, progressionYear, studentRef, destinationSelectList.val());
+            //No longer saving to DB on change
+            //recordDestination(system, progressionYear, studentRef, destinationCode);
+            recordDestinationJson(studentRef, destinationCode, destinationName);
         }
         else {
+            //If progressing then do not record a destination and remove any recorded today by the system
             destinationSelectList.addClass("d-none");
             destinationSelectList.val(null);
-            recordDestination(system, progressionYear, studentRef, null);
+
+            //No longer saving to DB on change
+            recordDestinationJson(studentRef, null, null);
+            var antiForgeryTokenID = $("#AntiForgeryTokenID").val();
+            saveDestination(system, progressionYear, studentRef, null, null, "Y", antiForgeryTokenID);
         }
     });
 
+    
     $(".DestinationOptionsSelectList").change(function (event) {
         let system = $("#SystemID").val();
         let academicYear = $("#AcademicYearID").val();
         let progressionYear = $("#ProgressionYearID").val();      
         let studentRef = $(this).attr("data-id");
+        let destinationCode = $(this).val();
+        let destinationName = $(this).children("option:selected").text();
 
-        recordDestination(system, progressionYear, studentRef, $(this).val());
+        //No longer saving to DB on change
+        //recordDestination(system, progressionYear, studentRef, destinationCode);
+
+        recordDestinationJson(studentRef, destinationCode, destinationName);
     });
 
     populateDestinations(system, progressionYear);
@@ -559,6 +580,7 @@ function setExistingDestinations() {
 function clearDestinationSelections(studentRef) {
     if (studentRef != null) {
         $("#HasCompleted-" + studentRef).prop("checked", false);
+        $("#HasCompleted-" + studentRef).trigger("change");
         $("#DestinationOptionsSelectList-" + studentRef).val(null);
         $("#DestinationOptionsSelectList-" + studentRef).addClass("d-none");
     }
@@ -579,6 +601,41 @@ function recordProgressionJson(studentRef, progressStudent) {
         for (let student in students) {
             if (students[student].studentRef === studentRef) {
                 students[student].progressLearner = progressStudent;
+            }
+        }
+
+        //Save students back to storage
+        try {
+            localStorage.setItem("students", JSON.stringify(students));
+        }
+        catch (e) {
+            doErrorModal("Error Storing Data in Browser", "Sorry an error occurred storing data in your web browser. Please check the local storage settings and your available disk space.");
+        }
+    }
+    catch {
+        doErrorModal("Error Setting Progression", "Sorry an error occurred setting the progression of this student to" + progressStudent + ".<br />Please attempt the operation again.");
+    }
+}
+
+function recordDestinationJson(studentRef, destinationCode, destinationName) {
+    /*Loads student list, updates with destination 
+     * and saves list back to storage*/
+    let students = JSON.parse(localStorage.getItem("students"));
+
+    try {
+        for (let student in students) {
+            if (students[student].studentRef === studentRef) {
+                //Only update destination if different
+                if (students[student].destinationCode !== destinationCode) {
+                    students[student].destinationCode = destinationCode;
+                    students[student].destinationName = destinationName;
+                    students[student].destinationChanged = true;
+
+                    //As null destinations are saved straight away only enable button if not null
+                    if (destinationCode != null) {
+                        $(".SaveDestinationButton").removeClass("disabled");
+                    }
+                }
             }
         }
 
