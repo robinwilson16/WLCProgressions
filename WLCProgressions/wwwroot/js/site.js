@@ -1,7 +1,7 @@
 ﻿//Load initial course list from database and store in local storage
 var system = $("#SystemID").val();
 var academicYear = $("#AcademicYearID").val();
-var hasEnrols = 1;
+var hasEnrols = true;
 loadAllCourses(system, academicYear, hasEnrols);
 
 $(function () {
@@ -193,7 +193,7 @@ $("#ProgressionModal").on("shown.bs.modal", function () {
 
     let system = $("#SystemID").val();
     let academicYear = $("#ProgressionYearID").val();
-    let hasEnrols = 0;
+    let hasEnrols = false;
     //Load courses for next year
     loadAllCourses(system, academicYear, hasEnrols);
 });
@@ -203,7 +203,7 @@ $("#ProgressionModal").on("hidden.bs.modal", function () {
 
     let system = $("#SystemID").val();
     let academicYear = $("#AcademicYearID").val();
-    let hasEnrols = 1;
+    let hasEnrols = true;
     //Load courses for current year
     loadAllCourses(system, academicYear, hasEnrols);
 });
