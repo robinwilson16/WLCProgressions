@@ -1,6 +1,7 @@
 CREATE PROCEDURE [dbo].[SPR_PRG_GetCourseGroupList]
 	@System NVARCHAR(20),
     @AcademicYear NVARCHAR(5),
+    @RequireEnrols BIT,
     @CourseSearch NVARCHAR(255)
 AS
 BEGIN
@@ -66,7 +67,15 @@ BEGIN
 		CRS.AcademicYearID = @AcademicYear
 		AND CRS.OfferingStatusID IN ( ''1'', ''3'' ) --Live and pending only
 		AND CLD.SubOfferingID IS NULL --Is a parent (has no parents itself)
-		AND COALESCE ( ENR.Enrolments, 0 ) > 0 --Must have enrolments
+        AND 
+            CASE
+                WHEN @RequireEnrols = 0 THEN 1
+                ELSE
+                    CASE
+                        WHEN COALESCE ( ENR.Enrolments, 0 ) > 0 THEN 1 --Must have enrolments
+                        ELSE 0
+                    END 
+            END = 1
 		AND CRS.Code + '' - '' + CRS.Name LIKE ''%'' + @CourseSearch + ''%''
 	ORDER BY
 		STE.Code,
@@ -78,6 +87,7 @@ BEGIN
     SET @SQLParams = 
         N'@System NVARCHAR(20),
         @AcademicYear NVARCHAR(5),
+        @RequireEnrols BIT,
         @CourseSearch NVARCHAR(255)';
 
     EXECUTE sp_executesql 
@@ -85,6 +95,7 @@ BEGIN
         @SQLParams, 
         @System = @System, 
         @AcademicYear = @AcademicYear, 
+        @RequireEnrols = @RequireEnrols,
         @CourseSearch = @CourseSearch;
 
 END
