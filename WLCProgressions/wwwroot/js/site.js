@@ -1,7 +1,12 @@
 ﻿//Load initial course list from database and store in local storage
 var system = $("#SystemID").val();
 var academicYear = $("#AcademicYearID").val();
-loadAllCourses(system, academicYear);
+var hasEnrols = 1;
+loadAllCourses(system, academicYear, hasEnrols);
+
+$(function () {
+    $('[data-toggle="popover"]').popover();
+})
 
 $("#AcademicYearID").change(function (event) {
     $("#ChangeAcademicYearID").submit();
@@ -188,8 +193,9 @@ $("#ProgressionModal").on("shown.bs.modal", function () {
 
     let system = $("#SystemID").val();
     let academicYear = $("#ProgressionYearID").val();
+    let hasEnrols = 0;
     //Load courses for next year
-    loadAllCourses(system, academicYear);
+    loadAllCourses(system, academicYear, hasEnrols);
 });
 
 $("#ProgressionModal").on("hidden.bs.modal", function () {
@@ -197,8 +203,9 @@ $("#ProgressionModal").on("hidden.bs.modal", function () {
 
     let system = $("#SystemID").val();
     let academicYear = $("#AcademicYearID").val();
+    let hasEnrols = 1;
     //Load courses for current year
-    loadAllCourses(system, academicYear);
+    loadAllCourses(system, academicYear, hasEnrols);
 });
 
 function doQuestionModalAction() {

@@ -6,9 +6,9 @@ var numPages = 1;
 var curPage = 1;
 var numItems = 10;
 
-function loadAllCourses(system, academicYear) {
+function loadAllCourses(system, academicYear, hasEnrols) {
     return new Promise(function (fulfill, reject) {
-        let dataToLoad = `/CourseGroups/?handler=Json&academicYear=${academicYear}`;
+        let dataToLoad = `/CourseGroups/?handler=Json&academicYear=${academicYear}&hasEnrols=${hasEnrols}`;
 
         if (system !== "") {
             dataToLoad += `&system=${system}`;
@@ -370,7 +370,7 @@ function displayStudents(system, academicYear, progressionYear, courseID, groupI
 
         //console.log(students);
         htmlData += `
-                <table class="table table-sm table-hover">
+                <table id="EnrolmentList" class="table table-sm table-hover">
                     <thead>
                         <tr>
                             <th scope="col">Student<br />Ref</th>                                
@@ -391,6 +391,8 @@ function displayStudents(system, academicYear, progressionYear, courseID, groupI
             let dateOfBirth = new Date(students[student].dob);
             let dateOfBirthStr = ("0" + dateOfBirth.getDate()).slice(-2) + "/" + ("0" + (dateOfBirth.getMonth() + 1)).slice(-2) + "/" + dateOfBirth.getFullYear();
             let attendPer = students[student].attendPer;
+            let appsButton = "";
+            let enrolsButton = "";
 
             let attendRate = "";
 
@@ -410,6 +412,79 @@ function displayStudents(system, academicYear, progressionYear, courseID, groupI
                 attendRate = "VeryPoor";
             }
 
+            let attendSummary = `
+                <ul class='AttendSummary'>
+                    <li>Planned: ${students[student].classesPlanned}</li>
+                    <li>Counted: ${students[student].classesCounted}</li>
+                    <li>Neutral (not counted): ${students[student].classesNeutral}</li>
+                    <li>Marked: ${students[student].classesMarked}</li>
+                    <li>Unmarked: ${students[student].classesUnmarked}</li>
+                    <li>Present: ${students[student].classesPresent}</li>
+                    <li>Absent: ${students[student].classesAbsent}</li>
+                    <li>Authorised Absence: ${students[student].classesAuthAbsence}</li>
+                    <li>Late: ${students[student].classesLate}</li>
+                    <li><strong>Attendance: ${+(attendPer * 100).toFixed(1)}&percnt;</strong></li>
+                    <li><strong>Category: ${attendRate}</strong></li>
+                </ul>`;
+
+            let riskSummary = `
+                <ul class='RiskSummary'>
+                    <li>Risk: ${students[student].riskName}</li>
+                    <li>Risk Colour: ${students[student].riskColour}</li>
+                </ul>`;
+
+            let appsArr = null;
+            let appsList = "";
+
+            if (students[student].appliedCoursesNextYear != null) {
+                appsArr = students[student].appliedCoursesNextYear.split(",");
+
+                for (let app of appsArr) {
+                    appsList += `<li>${app}</li>`;
+                }
+
+                appsList = `<ul>${appsList}</ul>`;
+            }
+
+            let enrolsArr = null;
+            let enrolsList = "";
+
+            if (students[student].enrolledCoursesNextYear != null) {
+                enrolsArr = students[student].enrolledCoursesNextYear.split(",");
+
+                for (let enrol of enrolsArr) {
+                    enrolsList += `<li>${enrol}</li>`;
+                }
+
+                enrolsList = `<ul>${enrolsList}</ul>`;
+            }
+
+            if (students[student].numAppsNextYear > 0) {
+                appsButton = `
+                    <button type="button" class="btn btn-outline-primary btn-sm LearnerPopover" data-toggle="popover" aria-describedby="${progressionYear} Applications for ${students[student].forename} ${students[student].surname}" data-content="${appsList}">
+                        <i class="fas fa-envelope-open-text"></i> ${students[student].numAppsNextYear}
+                    </button>`;
+            }
+            else {
+                appsButton = `
+                    <button type="button" class="btn btn-outline-primary btn-sm disabled">
+                        <i class="fas fa-envelope-open-text"></i> ${students[student].numAppsNextYear}
+                    </button>`;
+            }
+
+            if (students[student].numEnrolsNextYear > 0) {
+                enrolsButton = `
+                    <button type="button" class="btn btn-outline-primary btn-sm LearnerPopover" data-toggle="popover" aria-describedby="${progressionYear} Enrolments for ${students[student].forename} ${students[student].surname}" data-content="${enrolsList}">
+                        <i class="fas fa-user-graduate"></i> ${students[student].numEnrolsNextYear}
+                    </button>`;
+            }
+            else {
+                enrolsButton = `
+                    <button type="button" class="btn btn-outline-primary btn-sm disabled">
+                        <i class="fas fa-user-graduate"></i> ${students[student].numEnrolsNextYear}
+                    </button>`;
+            }
+
             htmlData += `
                         <tr>
                             <th scope="row">${students[student].studentRef}</th>
@@ -418,16 +493,18 @@ function displayStudents(system, academicYear, progressionYear, courseID, groupI
                             <td class="text-center">${students[student].age31stAug + 1}</td>
                             <td>${students[student].completion}</td>
                             <td class="text-center">
-                                <div class="AttendPercent ${attendRate}">
-                                    <div class="AttendValue">${+(attendPer * 100).toFixed(1)}%</div>
+                                <div class="AttendPercent ${attendRate} LearnerPopover" data-toggle="popover" aria-describedby="${academicYear} Attendance for ${students[student].forename} ${students[student].surname}" data-content="${attendSummary}">
+                                    <div class="AttendValue">${+(attendPer * 100).toFixed(1)}&percnt;</div>
                                     <div class="AttendBar" style="width: ${attendPer * 100}%">
                                     </div>
                                 </div>
                             </td>
-                            <td class="text-center"><div class="RiskIndicator ${students[student].riskColour}"></div></td>
                             <td class="text-center">
-                                <button type="button" class="btn btn-outline-primary btn-sm"><i class="fas fa-envelope-open-text"></i> ${students[student].numAppsNextYear}</button>
-                                <button type="button" class="btn btn-outline-primary btn-sm"><i class="fas fa-user-graduate"></i> ${students[student].numEnrolsNextYear}</button>
+                                <div class="RiskIndicator ${students[student].riskColour} LearnerPopover" data-toggle="popover" aria-describedby="${academicYear} ProMonitor Risk Rating for ${students[student].forename} ${students[student].surname}" data-content="${riskSummary}"></div>
+                            </td>
+                            <td class="text-center">
+                                ${appsButton}
+                                ${enrolsButton}
                             </td>
                             <td class="text-center">
                                 <label class="switch-sm">
@@ -468,6 +545,35 @@ function listLoadedStudentFunctions() {
 
     $(".CheckAllStudents").prop("disabled", false);
     $(".ProgressLearnerButton").removeClass("disabled");
+
+    $(".LearnerPopover").click(function (event) {
+        //Close any existing popups
+        $(".LearnerPopover").popover("hide");
+
+        let title = $(this).attr('aria-describedby');
+        $(this).popover({
+            title: function () {
+                return title +
+                    '<span class="close">&times</span>';
+            },
+            container: "#EnrolmentList",
+            sanitize: false,
+            html: true
+        }).popover("show");
+    });
+
+    $(".LearnerPopover").on('shown.bs.popover', function (e) {
+        //Functionality for close button
+        var curPopover = $('#' + $(e.target).attr('aria-describedby'));
+
+        curPopover.find('.close').click(function () {
+            $(".LearnerPopover").popover("hide");
+        });
+    });
+
+    $(".popover span.close").click(function () {
+        $(this).popover("toggle");
+    });
 
     $(".ProgressStudent").click(function (event) {
         let studentRef = $(this).attr("data-id");
