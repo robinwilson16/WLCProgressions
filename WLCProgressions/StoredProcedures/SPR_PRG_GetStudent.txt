@@ -38,7 +38,9 @@ BEGIN
         DestinationCode = SD.LocalDestinationID,
         DestinationName = DES.Description,
         DestinationChanged = CAST ( 0 AS bit ),
-		ProgressLearner = CAST ( 0 AS bit )
+		ProgressLearner = CAST ( 0 AS bit ),
+        OfferType = 0,
+        OfferCondition = 0
 	FROM ' + @System + '.dbo.StudentDetail SD
     LEFT JOIN ' + @System + '.dbo.LocalDestination DES
         ON DES.LocalDestinationID = SD.LocalDestinationID

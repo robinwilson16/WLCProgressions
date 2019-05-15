@@ -54,15 +54,15 @@
     <footer class="fixed-bottom bg-light">
         <div class="container-fluid">
             <div class="row">
-                <div class="col-md">
+                <div class="col-md-3">
                     <span class="text-muted">
                         @User.Identity.Name.Split('\\').Last()
                     </span>
                 </div>
-                <div class="col-md text-center">
-                    @Model.SystemID
+                <div class="col-md-6 text-center">
+                    @Model.SystemID | @Model.SystemILPID
                 </div>
-                <div class="col-md text-right">
+                <div class="col-md-3 text-right">
                     <span class="text-muted">&copy; 2019 - WLCProgressions</span>
                 </div>
             </div>

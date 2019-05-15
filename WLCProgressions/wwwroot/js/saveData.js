@@ -94,20 +94,24 @@ function saveDestination(system, academicYear, studentRef, destinationCode, dest
     });
 }
 
-async function saveProgressions(system, academicYear, students, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID) {
-    var antiForgeryTokenID = $("#AntiForgeryTokenID").val();
-    var numStudents = 0;
-    var numProgressedStudents = 0;
-    var numSaved = 0;
-    var numErrors = 0;
-    var studentRef = "0";
-    var progressLearner = false;
+async function saveProgressions(system, academicYear, students, courseFromID, groupFromID, courseToID, groupToID, progressionType) {
+    let antiForgeryTokenID = $("#AntiForgeryTokenID").val();
+    let numStudents = 0;
+    let numProgressedStudents = 0;
+    let numSaved = 0;
+    let numErrors = 0;
+    let studentRef = "0";
+    let progressLearner = false;
+    let offerTypeID = 0;
+    let offerConditionID = 0;
 
     for (let student in students) {
         numStudents += 1;
 
         studentRef = students[student].studentRef;
         progressLearner = students[student].progressLearner;
+        offerTypeID = students[student].offerType;
+        offerConditionID = students[student].offerCondition;
 
         if (studentRef <= "0") {
             console.log(`Error saving progression for student ${studentRef} to course ${courseToID}, group ${groupToID} in ${system} system`);
@@ -135,7 +139,7 @@ async function saveProgressions(system, academicYear, students, courseFromID, gr
         doErrorModal("Error Saving Progression (NSS: No Students Selected)", "No students were selected for progression.<br />Please review your selection and retry.");
     }
     else if (numSaved !== numProgressedStudents) {
-        doErrorModal("Error Saving Progression (NAS: Not All Saved)", "Sorry an error occurred saving the progression for <strong>" + numErrors + "</strong> of the <strong>" + numStudents + "</strong> learners.<br />Please review the data and retry.");
+        doErrorModal("Error Saving Progression (NAS: Not All Saved)", "Sorry an error occurred saving the progression for <strong>" + numErrors + "</strong> of the <strong>" + numProgressedStudents + "</strong> learners.<br />Please review the data and retry.");
     }
     else {
         doModal("Progressions Successfully Saved", "Progression data has been successfully recorded for all <strong>" + numProgressedStudents + "</strong> learners.");

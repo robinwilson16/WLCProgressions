@@ -1237,7 +1237,7 @@ BEGIN
                 N'@AcademicYear NVARCHAR(5),
                 @StudentDetailID INT,
                 @CourseToID INT,
-                @CourseCodeOUT INT OUTPUT';
+                @CourseCodeOUT NVARCHAR(50) OUTPUT';
 
             EXECUTE sp_executesql 
                 @SQLString, 
@@ -1270,7 +1270,7 @@ BEGIN
                 N'@AcademicYear NVARCHAR(5),
                 @StudentDetailID INT,
                 @CourseToID INT,
-                @CourseCodeOUT INT OUTPUT';
+                @CourseCodeOUT NVARCHAR(50) OUTPUT';
 
             EXECUTE sp_executesql 
                 @SQLString, 

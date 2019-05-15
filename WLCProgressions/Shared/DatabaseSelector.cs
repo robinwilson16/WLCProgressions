@@ -15,11 +15,15 @@ namespace WLCProgressions.Shared
 
             string systemDB;
 
-            if(system == null)
+            if (string.IsNullOrEmpty(system))
             {
                 systemDB = LiveSystem;
             }
             else if (system == "LIVE")
+            {
+                systemDB = LiveSystem;
+            }
+            else if (system == LiveSystem)
             {
                 systemDB = LiveSystem;
             }
@@ -31,18 +35,36 @@ namespace WLCProgressions.Shared
             return systemDB;
         }
 
-        public static string GetILPDatabase(IConfiguration configuration, string system)
+        public static string GetILPDatabase(IConfiguration configuration, string systemILP, string system)
         {
             string LiveILPSystem = configuration.GetSection("Systems")["LiveILPSystem"];
             string TestILPSystem = configuration.GetSection("Systems")["TestILPSystem"];
+            string LiveSystem = configuration.GetSection("Systems")["LiveSystem"];
+            string TestSystem = configuration.GetSection("Systems")["TestSystem"];
 
             string systemDB;
 
-            if (system == null)
+            if (systemILP == LiveILPSystem)
             {
                 systemDB = LiveILPSystem;
             }
-            else if (system == "LIVE")
+            else if (systemILP == TestILPSystem)
+            {
+                systemDB = TestILPSystem;
+            }
+            else if (system == LiveSystem)
+            {
+                systemDB = LiveILPSystem;
+            }
+            else if (system == TestSystem)
+            {
+                systemDB = TestILPSystem;
+            }
+            else if (string.IsNullOrEmpty(systemILP) && string.IsNullOrEmpty(system))
+            {
+                systemDB = LiveILPSystem;
+            }
+            else if (systemILP == "LIVE" || system == "LIVE")
             {
                 systemDB = LiveILPSystem;
             }

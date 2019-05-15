@@ -30,7 +30,7 @@ namespace WLCProgressions.Pages.Students
             //Student = await _context.Student.ToListAsync();
             string SystemDB = DatabaseSelector.GetDatabase(_configuration, system);
             var SystemParam = new SqlParameter("@system", SystemDB);
-            string SystemILPDB = DatabaseSelector.GetILPDatabase(_configuration, systemILP);
+            string SystemILPDB = DatabaseSelector.GetILPDatabase(_configuration, systemILP, system);
             var SystemILPParam = new SqlParameter("@systemILP", SystemILPDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(AcademicYear, _context);
             var AcademicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
@@ -46,7 +46,7 @@ namespace WLCProgressions.Pages.Students
         {
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
             var SystemParam = new SqlParameter("@system", systemDB);
-            string SystemILPDB = DatabaseSelector.GetILPDatabase(_configuration, systemILP);
+            string SystemILPDB = DatabaseSelector.GetILPDatabase(_configuration, systemILP, system);
             var SystemILPParam = new SqlParameter("@systemILP", SystemILPDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(AcademicYear, _context);
             var AcademicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);

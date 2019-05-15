@@ -29,15 +29,17 @@ namespace WLCProgressions.Pages
         public IList<SelectListData> ApplicationCondition { get; set; }
 
         public string SystemID { get; set; }
+        public string SystemILPID { get; set; }
         public string AcademicYear { get; set; }
         public string ProgressionYear { get; set; }
         public string DefaultAcademicYear { get; set; }
 
-        public async Task OnGetAsync(string system, string academicYear)
+        public async Task OnGetAsync(string system, string systemILP, string academicYear)
         {
             string defaultAcademicYear = await AcademicYearFunctions.GetDefaultAcademicYear(_context);
 
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
+            string systemILPDB = DatabaseSelector.GetILPDatabase(_configuration, systemILP, system);
             var systemParam = new SqlParameter("@System", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
             var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
@@ -45,6 +47,7 @@ namespace WLCProgressions.Pages
             var progressionYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
 
             SystemID = systemDB;
+            SystemILPID = systemILPDB;
             AcademicYear = CurrentAcademicYear;
             ProgressionYear = ProgressionAcademicYear;
             DefaultAcademicYear = defaultAcademicYear;

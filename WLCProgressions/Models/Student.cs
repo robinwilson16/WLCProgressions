@@ -69,5 +69,9 @@ namespace WLCProgressions.Models
 
         public bool DestinationChanged { get; set; }
         public bool ProgressLearner { get; set; }
+
+        public int OfferType { get; set; }
+
+        public int OfferCondition { get; set; }
     }
 }

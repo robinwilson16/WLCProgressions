@@ -294,6 +294,7 @@ function listLoadedCourseFunctions(searchType) {
 function listLoadedCourseFromFunctions() {
     $(".ProgressLearnersButton").click(function (event) {
         let system = $("#SystemID").val();
+        let systemILP = $("#SystemILPID").val();
         let academicYear = $("#AcademicYearID").val();
         let progressionYear = $("#ProgressionYearID").val();
 
@@ -311,16 +312,15 @@ function listLoadedCourseFromFunctions() {
         $("#CurrentTeamCode").val(teamCode);
         $("#AcademicYearID").val(academicYear);
 
-        displayStudents(system, academicYear, progressionYear, courseID, groupID);
+        displayStudents(system, systemILP, academicYear, progressionYear, courseID, groupID);
     });
 }
 
 function listLoadedCourseToFunctions() {
-    $(".SelectCourseToProgressButton").click(function (event) {
-        $(".OfferTypeLabelCol").removeClass("d-none");
-        $(".OfferTypeSelectListCol").removeClass("d-none");
-
+    $(".SelectCourseToProgressButton").click(function (event) {        
         //Display details of course being 
+        let academicYear = $("#AcademicYearID").val();
+        let progressionYear = $("#ProgressionYearID").val();
         let faculty = $(this).attr("aria-describedby");
         let team = $(this).attr("data-parent");
         let courseID = $(this).attr("data-id");
@@ -339,10 +339,138 @@ function listLoadedCourseToFunctions() {
         $("#ProgressToCourseButtonTextID").html(" to " + courseCode);
 
         $(".SelectedCourseDetails").removeClass("d-none");
+
+        //Now get list of students to display in list
+        let students = JSON.parse(localStorage.getItem("students"));
+        let studentsHtml = "";
+
+        studentsHtml += `
+            <table id="ProgressorsList" class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">Student<br />Ref</th>                                
+                        <th scope="col">Surname</th>
+                        <th scope="col">Forename</th>
+                        <th scope="col">Age 31<sup>st</sup><br />Aug ${academicYear.substring(3, 5)}</th>
+                        <th scope="col" class="text-center">Offer Details</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        try {
+            for (let student in students) {
+                if (students[student].progressLearner === true) {
+                    studentsHtml += `
+                    <tr>
+                        <th scope="row">${students[student].studentRef}</th>
+                        <td>${students[student].surname}</td>
+                        <td>${students[student].forename}</td>
+                        <td class="text-center">${students[student].age31stAug + 1}</td>
+                        <td>
+                            <div class="row">
+                                <div class="col-md">
+                                    <select id="OfferTypeSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select OfferTypeSelectList" data-id="${students[student].studentRef}">
+                                        <option value="" hidden disabled selected>Offer Type...</option>
+                                    </select>
+                                </div>
+                                <div id="OfferConditionSelectListCol-${students[student].studentRef}" class="col-md d-none OfferConditionSelectListCol">
+                                    <select id="OfferConditionSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select OfferConditionSelectList" data-id="${students[student].studentRef}">
+                                        <option value="" hidden disabled selected>Offer Condition...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>`;
+                }
+            }
+
+            studentsHtml += `
+                </tbody>
+            </table>`;
+
+            $("#StudentToArea").html(studentsHtml);
+
+            let domain = "APPLICATION_OFFER";
+            let selectList = ".OfferTypeSelectList";
+            populateDropDown(system, progressionYear, domain, selectList);
+
+            domain = "APPLICATION_Condition";
+            selectList = ".OfferConditionSelectList";
+            populateDropDown(system, progressionYear, domain, selectList);
+
+            $(".OfferTypeSelectList").change(function (event) {
+                let studentRef = $(this).attr("data-id");
+                let offerType = $(this).val();
+                let offerCondition = $("#OfferConditionSelectList-" + studentRef).val();
+
+                if (offerType === "2") {
+                    $("#OfferConditionSelectListCol-" + studentRef).removeClass("d-none");
+                }
+                else {
+                    $("#OfferConditionSelectListCol-" + studentRef).addClass("d-none");
+                }
+
+                //Check if input is valid for all learners
+                checkOfferDetails();
+
+                //Update details for student
+                recordOfferJson(studentRef, offerType, offerCondition);
+            });
+
+            $(".OfferConditionSelectList").change(function (event) {
+                let studentRef = $(this).attr("data-id");
+                let offerType = $("#OfferTypeSelectList-" + studentRef).val();
+                let offerCondition = $(this).val();
+
+                //Check if input is valid for all learners
+                checkOfferDetails();
+
+                //Update details for student
+                recordOfferJson(studentRef, offerType, offerCondition);
+            });
+        }
+        catch {
+            doErrorModal("Error Loading List of Learners", "Sorry an error occurred loading the list of learners.<br />Please attempt the operation again.");
+        }
     });
 }
 
-function displayStudents(system, academicYear, progressionYear, courseID, groupID) {
+function checkOfferDetails() {
+    let inputComplete = false;
+    let recordsOk = 0;
+    let recordsErr = 0;
+    $(".OfferTypeSelectList").each(function (event) {
+        let thisStudentRef = $(this).attr("data-id");
+        let thisOfferTypeVal = $(this).val();
+        let thisOfferConditionVal = $("#OfferConditionSelectList-" + thisStudentRef).val();
+
+        if (thisOfferTypeVal === "1") {
+            recordsOk += 1;
+        }
+        else if (thisOfferTypeVal === "2" && thisOfferConditionVal !== null) {
+            recordsOk += 1;
+        }
+        else if (thisOfferTypeVal === null) {
+            recordsErr += 1;
+        }
+        else {
+            recordsErr += 1;
+        }
+    });
+
+    if (recordsOk > 0 && recordsErr === 0) {
+        $(".SaveProgressionButton").removeClass("disabled");
+        inputComplete = true;
+    }
+    else {
+        $(".SaveProgressionButton").addClass("disabled");
+        inputComplete = false;
+    }
+
+    return inputComplete;
+}
+
+function displayStudents(system, systemILP, academicYear, progressionYear, courseID, groupID) {
     let dataToLoad = "";
 
     if (groupID <= 0) {
@@ -353,7 +481,7 @@ function displayStudents(system, academicYear, progressionYear, courseID, groupI
     }
 
     if (system !== "") {
-        dataToLoad += `&system=${system}&systemILP=${system}`;
+        dataToLoad += `&system=${system}&systemILP=${systemILP}`;
     }
 
     var loadedStudents = $.get(dataToLoad, function (data) {
@@ -518,7 +646,7 @@ function displayStudents(system, academicYear, progressionYear, courseID, groupI
                                         <input type="checkbox" id="HasCompleted-${students[student].studentRef}" class="custom-control-input HasCompleted" data-id="${students[student].studentRef}" />
                                         <label class="custom-control-label" for="HasCompleted-${students[student].studentRef}">Not Progressing</label>
                                     </div>
-                                    <select id="DestinationOptionsSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select d-none DestinationOptionsSelectList" asp-items="ViewBag.OfferID" data-id="${students[student].studentRef}">
+                                    <select id="DestinationOptionsSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select d-none DestinationOptionsSelectList" data-id="${students[student].studentRef}">
                                         <option value="" hidden disabled selected>Please select...</option>
                                     </select>
                                     <input type="hidden" id="DestinationOptionsExistingID-${students[student].studentRef}" value="${students[student].destinationCode}" />
@@ -531,7 +659,7 @@ function displayStudents(system, academicYear, progressionYear, courseID, groupI
                     </tbody>
                 </table>`;
 
-        $("#StudentArea").html(htmlData);
+        $("#StudentFromArea").html(htmlData);
         console.log(dataToLoad + " Loaded");
 
         listLoadedStudentFunctions();
@@ -637,31 +765,44 @@ function listLoadedStudentFunctions() {
 
         recordDestinationJson(studentRef, destinationCode, destinationName);
     });
-
-    populateDestinations(system, progressionYear);
+    let domain = "DESTINATION";
+    let selectList = ".DestinationOptionsSelectList";
+    populateDropDown(system, progressionYear, domain, selectList)
+        .then(function (value) {
+            setExistingDestinations();
+        });
+    //setExistingDestinations();
 }
 
-function populateDestinations(system, academicYear) {
-    let dataToLoad = `/SelectLists/DESTINATION/?handler=Json&academicYear=${academicYear}`;
+function populateDropDown(system, academicYear, domain, selectList) {
+    return new Promise(resolve => {
+        try {
+            let dataToLoad = `/SelectLists/${domain}/?handler=Json&academicYear=${academicYear}`;
 
-    if (system !== "") {
-        dataToLoad += `&system=${system}`;
-    }
+            if (system !== "") {
+                dataToLoad += `&system=${system}`;
+            }
 
-    var destinationOptions = $.get(dataToLoad, function (data) {
-        let selectOptions = data.selectOptions;
+            var destinationOptions = $.get(dataToLoad, function (data) {
+                let selectOptions = data.selectOptions;
 
-        //$(".DestinationOptionsSelectList").find('option').remove(); 
+                //$(".DestinationOptionsSelectList").find('option').remove(); 
 
-        for (let option in selectOptions) {
-            let selectOption =
-                `<option value="${selectOptions[option].code}">${selectOptions[option].description}</option>`;
-            $(".DestinationOptionsSelectList").append(selectOption);
+                for (let option in selectOptions) {
+                    let selectOption =
+                        `<option value="${selectOptions[option].code}">${selectOptions[option].description}</option>`;
+                    $(selectList).append(selectOption);
+                }
+
+                console.log(dataToLoad + " Loaded");
+
+                //setExistingDestinations();
+                resolve(1);
+            });
         }
-
-        console.log(dataToLoad + " Loaded");
-
-        setExistingDestinations();
+        catch (e) {
+            resolve(0);
+        }
     });
 }
 
@@ -754,6 +895,35 @@ function recordDestinationJson(studentRef, destinationCode, destinationName) {
         }
     }
     catch {
-        doErrorModal("Error Setting Progression", "Sorry an error occurred setting the progression of this student to" + progressStudent + ".<br />Please attempt the operation again.");
+        doErrorModal("Error Setting Progression", "Sorry an error occurred setting the progression of this student to " + progressStudent + ".<br />Please attempt the operation again.");
+    }
+}
+
+function recordOfferJson(studentRef, offerType, offerCondition) {
+    /*Loads student list, updates with destination 
+     * and saves list back to storage*/
+    let students = JSON.parse(localStorage.getItem("students"));
+
+    try {
+        for (let student in students) {
+            if (students[student].studentRef === studentRef) {
+                //Only update destination if different
+                if (students[student].offerType !== offerType || students[student].offerCondition !== offerCondition) {
+                    students[student].offerType = offerType;
+                    students[student].offerCondition = offerCondition;
+                }
+            }
+        }
+
+        //Save students back to storage
+        try {
+            localStorage.setItem("students", JSON.stringify(students));
+        }
+        catch (e) {
+            doErrorModal("Error Storing Data in Browser", "Sorry an error occurred storing data in your web browser. Please check the local storage settings and your available disk space.");
+        }
+    }
+    catch {
+        doErrorModal("Error Setting Offer Type", "Sorry an error occurred setting the offer details of this student to " + offerType + " - " + offerCondition + ".<br />Please attempt the operation again.");
     }
 }
