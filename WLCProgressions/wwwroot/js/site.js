@@ -9,28 +9,44 @@ $(function () {
 });
 
 $("#AboutSystemLink").click(function (event) {
-    let title = `About WLC Progressions System`;
-    let content = `WLC Progressions System &copy; Ealing and Hammersmith West London College`;
-
-    doModal(title, content);
-});
-
-$("#ChangelogLink").click(function (event) {
     let dataToLoad = `https://raw.githubusercontent.com/robinwilson16/WLCProgressions/master/README.md`;
-    let title = `Changelog for WLC Progressions System`;
-    let content = ``;
+    let title = `About WLC Progressions System`;
 
     $.get(dataToLoad, function (data) {
 
     })
         .then(data => {
-        doModal(title, data);
+            var markdown = marked(data);
+            let content = `
+                <p>WLC Progressions System &copy; Ealing and Hammersmith West London College</p>
+                <div class="scrollable">${markdown}</div>`;
+
+            doModal(title, content, "lg", "AboutInfo");
+        })
+        .fail(function () {
+            let content = `Error loading content`;
+
+            doErrorModal(title, content);
+    });
+    doModal(title, content);
+});
+
+$("#ChangelogLink").click(function (event) {
+    let dataToLoad = `https://raw.githubusercontent.com/robinwilson16/WLCProgressions/master/CHANGELOG.md`;
+    let title = `Changelog for WLC Progressions System`;
+
+    $.get(dataToLoad, function (data) {
+
+    })
+        .then(data => {
+            var markdown = marked(data);
+
+            doModal(title, markdown, "lg", "ChangelogInfo");
     })
         .fail(function () {
-        let title = `Changelog for WLC Progressions System`;
-        let content = `Error loading content`;
+            let content = `Error loading content`;
 
-        doErrorModal(title, content);
+            doErrorModal(title, content);
     });
 });
 

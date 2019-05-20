@@ -37,6 +37,8 @@ namespace WLCProgressions.Pages
         public string UserDetails { get; set; }
         public string UserGreeting { get; set; }
 
+        public string SystemVersion { get; set; }
+
         public async Task OnGetAsync(string system, string systemILP, string academicYear)
         {
             string defaultAcademicYear = await AcademicYearFunctions.GetDefaultAcademicYear(_context);
@@ -79,6 +81,8 @@ namespace WLCProgressions.Pages
             UserDetails = await Identity.GetFullName(system, academicYear, User.Identity.Name.Split('\\').Last(), _context, _configuration);
 
             UserGreeting = Identity.GetGreeting();
+
+            SystemVersion = _configuration["Version"];
         }
     }
 }

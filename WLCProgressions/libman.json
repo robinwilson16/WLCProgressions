@@ -3,19 +3,20 @@
   "defaultProvider": "cdnjs",
   "libraries": [
     {
-      "provider": "cdnjs",
       "library": "jquery@3.4.1",
       "destination": "wwwroot/lib/jquery/"
     },
     {
-      "provider": "cdnjs",
       "library": "twitter-bootstrap@4.3.1",
       "destination": "wwwroot/lib/twitter-bootstrap/"
     },
     {
-      "provider": "cdnjs",
       "library": "font-awesome@5.8.1",
       "destination": "wwwroot/lib/font-awesome/"
+    },
+    {
+      "library": "marked@0.6.2",
+      "destination": "wwwroot/lib/marked/"
     }
-]
+  ]
 }

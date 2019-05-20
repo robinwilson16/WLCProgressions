@@ -32,16 +32,17 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION AddProgression
         
-            DECLARE @ApplicationTypeID INT
-            DECLARE @InterviewTypeID INT
-            DECLARE @ApplicationDecisionID INT
-            DECLARE @CollegeDecisionID INT
-            DECLARE @StudentDetailID INT
-            DECLARE @OfferConditionIDCheck INT
-            DECLARE @OfferConditionDesc NVARCHAR(MAX)
+            DECLARE @ApplicationTypeID INT;
+            DECLARE @InterviewTypeID INT;
+            DECLARE @ApplicationDecisionID INT;
+            DECLARE @CollegeDecisionID INT;
+            DECLARE @StudentDetailID INT;
+            DECLARE @OfferConditionIDCheck INT;
+            DECLARE @OfferConditionDesc NVARCHAR(MAX);
             DECLARE @CourseCode NVARCHAR(50);
-            DECLARE @CourseIDCheck INT
-            DECLARE @StaffID INT
+            DECLARE @CourseIDCheck INT;
+            DECLARE @Destination INT;
+            DECLARE @StaffID INT;
             DECLARE @ErrorMsg NVARCHAR(255) = '';
 
             /*Check drop-down values are valid*/
@@ -104,7 +105,34 @@ BEGIN
             
             SET @SQLString = 
                 N'SELECT 
-                    @CourseIDCheckOUT = CRS.OfferingID 
+                    @CourseIDCheckOUT = CRS.OfferingID,
+                    @DestinationOUT = 
+                        CASE
+                            WHEN CRS.MajorFundingSourceID = ''001'' THEN 6 --Entered higher education
+                            WHEN CRS.FundingID = 25 THEN
+                                CASE
+                                    WHEN COALESCE ( CRS.PlannedLearningHours1618, 0 ) + COALESCE ( CRS.PlannedEEPHours1618, 0 ) >= 540 THEN 44 --Other FE* (Full-Time)
+                                    ELSE 45 --Other FE* (Part-Time)
+                                END
+                            WHEN CRS.FundingID = 36 THEN 20 --Entered Apprenticeship
+                            WHEN CRS.FundingID = 35 THEN
+                                CASE
+                                    WHEN CRS.ProgrammeTypeID IS NOT NULL THEN 20 --Entered Apprenticeship
+                                    ELSE 
+                                        CASE
+                                            WHEN COALESCE ( CRS.PlannedLearningHours19Plus, 0 ) + COALESCE ( CRS.PlannedEEPHours19Plus, 0 ) >= 540 THEN 44 --Other FE* (Full-Time)
+                                            ELSE 45 --Other FE* (Part-Time)
+                                        END
+                                END
+                            WHEN CRS.OfferingTypeID = 1 THEN 
+                                CASE
+                                    WHEN COALESCE ( CRS.PlannedLearningHours1618, 0 ) + COALESCE ( CRS.PlannedEEPHours1618, 0 ) >= 540 THEN 44 --Other FE* (Full-Time)
+                                    ELSE 45 --Other FE* (Part-Time)
+                                END
+                            WHEN CRS.OfferingTypeID = 4 THEN 6 --Entered higher education
+                            WHEN CRS.OfferingTypeID = 13 THEN 20 --Entered Apprenticeship
+                            ELSE 45 --Other FE* (Part-Time)
+                        END
                 FROM ' + @System + '.dbo.Offering CRS 
                 LEFT JOIN ' + @System + '.dbo.OfferingGroup GRP
                     ON GRP.OfferingID = CRS.OfferingID
@@ -124,14 +152,16 @@ BEGIN
             SET @SQLParams = 
                 N'@CourseToID INT,
                 @GroupToID INT,
-                @CourseIDCheckOUT INT OUTPUT';
+                @CourseIDCheckOUT INT OUTPUT,
+                @DestinationOUT INT OUTPUT';
 
             EXECUTE sp_executesql 
                 @SQLString, 
                 @SQLParams, 
                 @CourseToID = @CourseToID, 
                 @GroupToID = @GroupToID, 
-                @CourseIDCheckOUT = @CourseIDCheck OUTPUT;
+                @CourseIDCheckOUT = @CourseIDCheck OUTPUT,
+                @DestinationOUT = @Destination OUTPUT;
 
             IF @CourseIDCheck IS NULL
                 BEGIN
@@ -263,16 +293,49 @@ BEGIN
 
             IF @ApplicationTypeID IS NULL
                 BEGIN
-                    SET @ErrorMsg = 'Correct Application Type ID Cannot Be Found in ProSolution Database'
+                    SET @ErrorMsg = 'Correct Application Type ID Cannot Be Found in ' + @System + ' Database'
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
 
             IF @InterviewTypeID IS NULL
                 BEGIN
-                    SET @ErrorMsg = 'Correct Interview Type ID Cannot Be Found in ProSolution Database'
+                    SET @ErrorMsg = 'Correct Interview Type ID Cannot Be Found in in ' + @System + ' Database'
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
 
+            IF @Destination IS NOT NULL
+                --Add a destination record for the learner depending on the course they are applying for
+                BEGIN TRY
+                    SET @SQLString = 
+                        N'EXEC SPR_PRG_UpdateDestination
+                            @System,
+                            @AcademicYear,
+                            @StudentRef,
+                            @Destination,
+                            @Username';
+
+                    SET @SQLParams = 
+                        N'@System NVARCHAR(50),
+                        @AcademicYear NVARCHAR(5),
+                        @StudentRef NVARCHAR(50),
+                        @Destination INT,
+                        @Username NVARCHAR(200)';
+
+                    EXECUTE sp_executesql 
+                        @SQLString, 
+                        @SQLParams,  
+                        @System = @System,
+                        @AcademicYear = @AcademicYear,
+                        @StudentRef = @StudentRef,
+                        @Destination = @Destination,
+                        @Username = @Username;
+                END TRY
+
+                BEGIN CATCH
+                    SET @ErrorMsg = 'Error updating destination in ' + @System + ' Database'
+                    RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+                END CATCH
+                
             /*First see if student detail record exists for progression year*/
             SET @SQLString = 
                 N'SELECT 

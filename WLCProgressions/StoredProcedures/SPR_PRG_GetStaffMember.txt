@@ -1,7 +1,7 @@
-ALTER PROCEDURE [dbo].[SPR_PRG_GetStaffMember]
+CREATE PROCEDURE [dbo].[SPR_PRG_GetStaffMember]
 	@System NVARCHAR(20),
     @AcademicYear NVARCHAR(5),
-    @StaffUserName NVARCHAR(50)
+    @UserName NVARCHAR(50)
     
 AS
 BEGIN
@@ -33,13 +33,12 @@ BEGIN
     SET @SQLParams = 
         N'@System NVARCHAR(20),
         @AcademicYear NVARCHAR(5),
-        @StaffUserName NVARCHAR(50)';
+        @UserName NVARCHAR(50)';
 
     EXECUTE sp_executesql 
         @SQLString, 
         @SQLParams, 
         @System = @System, 
         @AcademicYear = @AcademicYear, 
-        @StaffUserName = @StaffUserName;
+        @UserName = @UserName;
 END
-GO
