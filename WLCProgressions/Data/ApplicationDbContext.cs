@@ -19,6 +19,7 @@ namespace WLCProgressions.Data
         public DbSet<CourseGroup> CourseGroup { get; set; }
         public DbSet<Progression> Progression { get; set; }
         public DbSet<SelectListData> SelectListData { get; set; }
+        public DbSet<StaffMember> StaffMember { get; set; }
         public DbSet<Student> Student { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -35,6 +36,9 @@ namespace WLCProgressions.Data
 
             modelBuilder.Entity<SelectListData>()
                 .HasKey(d => new { d.Code });
+
+            modelBuilder.Entity<StaffMember>()
+                .HasKey(c => new { c.StaffRef });
 
             modelBuilder.Entity<Student>()
                 .HasKey(s => new { s.StudentRef });

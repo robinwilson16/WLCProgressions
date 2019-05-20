@@ -34,6 +34,9 @@ namespace WLCProgressions.Pages
         public string ProgressionYear { get; set; }
         public string DefaultAcademicYear { get; set; }
 
+        public string UserDetails { get; set; }
+        public string UserGreeting { get; set; }
+
         public async Task OnGetAsync(string system, string systemILP, string academicYear)
         {
             string defaultAcademicYear = await AcademicYearFunctions.GetDefaultAcademicYear(_context);
@@ -72,6 +75,10 @@ namespace WLCProgressions.Pages
                 .ToListAsync();
 
             ViewData["ConditionID"] = new SelectList(ApplicationCondition, "Code", "Description");
+
+            UserDetails = await Identity.GetFullName(system, academicYear, User.Identity.Name.Split('\\').Last(), _context, _configuration);
+
+            UserGreeting = Identity.GetGreeting();
         }
     }
 }

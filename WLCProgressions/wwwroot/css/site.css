@@ -110,3 +110,12 @@
     background-color: #f9ebea;
     border: 1px solid #641E16;
 }
+
+.modal#ProgressionModal .modal-dialog {
+    
+}
+
+.modal#ProgressionModal .modal-body {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}

@@ -7,32 +7,41 @@ var curPage = 1;
 var numItems = 10;
 
 function loadAllCourses(system, academicYear, hasEnrols) {
-    return new Promise(function (fulfill, reject) {
+    return new Promise(resolve => {
         let dataToLoad = `/CourseGroups/?handler=Json&academicYear=${academicYear}&hasEnrols=${hasEnrols}`;
 
         if (system !== "") {
             dataToLoad += `&system=${system}`;
         }
 
-        var loadedCourses = $.get(dataToLoad, function (data) {
-            numItems = data.courses.length;
-            numPages = Math.ceil(numItems / numItemsPerPage);
+        $.get(dataToLoad, function (data) {
+            
+        })
+            .then(data => {
+                numItems = data.courses.length;
+                numPages = Math.ceil(numItems / numItemsPerPage);
 
-            try {
-                localStorage.setItem("courses", JSON.stringify(data));
-                console.log(dataToLoad + " Loaded");
-                fulfill(dataToLoad + " Loaded");
-            }
-            catch (e) {
-                doErrorModal("Error Storing Data in Browser", "Sorry an error occurred storing data in your web browser. Please check the local storage settings and your available disk space.");
-                reject(dataToLoad + " Not Loaded");
-            }
-        });
+                try {
+                    localStorage.setItem("courses", JSON.stringify(data));
+                    console.log(dataToLoad + " Loaded");
+                    resolve(1);
+                }
+                catch (e) {
+                    doErrorModal("Error Storing Data in Browser", "Sorry an error occurred storing data in your web browser. Please check the local storage settings and your available disk space.");
+                    resolve(0);
+                }
+            })
+            .fail(function () {
+                let title = `Error Loading Courses`;
+                let content = `Sorry an error occurred loading the list of courses. Please try again.`;
+
+                doErrorModal(title, content);
+            });
     });
 }
 
 function filterCourses(searchField, searchType, fac, team) {
-    return new Promise(function (fulfill, reject) {
+    return new Promise(resolve => {
         let allCourses = JSON.parse(localStorage.getItem("courses"));
         let filteredCourses = allCourses.courses;
 
@@ -73,12 +82,12 @@ function filterCourses(searchField, searchType, fac, team) {
             noResultsCourses(searchType);
         }
 
-        fulfill("Filter Applied");
+        resolve(1);
     });
 }
 
 function displayCourses(searchType) {
-    return new Promise(function (fulfill, reject) {
+    return new Promise(resolve => {
         //Reset page to 1
         //curPage = 1;
 
@@ -198,7 +207,7 @@ function displayCourses(searchType) {
         }
         listLoadedCourseFunctions(searchType);
 
-        fulfill("Courses Loaded");
+        resolve(1);
     });
 }
 
@@ -212,12 +221,21 @@ function loadCourseGroup(search) {
         dataToLoad += `&system=${system}`;
     }
 
-    var loadSearchResults = $.get(dataToLoad, function (data) {
-        var searchData = $(data).find("#SearchResults");
-        $("#SearchFromArea").html(searchData);
+    $.get(dataToLoad, function (data) {
+        
+    })
+        .then(data => {
+            var searchData = $(data).find("#SearchResults");
+            $("#SearchFromArea").html(searchData);
 
-        console.log(dataToLoad + " Loaded");
-    });
+            console.log(dataToLoad + " Loaded");
+        })
+        .fail(function () {
+            let title = `Error Loading Search Results`;
+            let content = `Sorry an error occurred loading the list of courses. Please try again.`;
+
+            doErrorModal(title, content);
+        });
 }
 
 function noResultsCourses(searchType) {
@@ -428,6 +446,10 @@ function listLoadedCourseToFunctions() {
                 //Update details for student
                 recordOfferJson(studentRef, offerType, offerCondition);
             });
+
+            //Scroll down page
+            //$(".modal#ProgressionModal .modal-body").scrollTop($("#ProgressToArea").offset().top);
+            $(".modal#ProgressionModal .modal-body").animate({ scrollTop: $("#ProgressToArea").offset().top }, "slow");
         }
         catch {
             doErrorModal("Error Loading List of Learners", "Sorry an error occurred loading the list of learners.<br />Please attempt the operation again.");
@@ -484,20 +506,23 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
         dataToLoad += `&system=${system}&systemILP=${systemILP}`;
     }
 
-    var loadedStudents = $.get(dataToLoad, function (data) {
-        let students = data.students;
+    $.get(dataToLoad, function (data) {
+        
+    })
+        .then(data => {
+            let students = data.students;
 
-        try {
-            localStorage.setItem("students", JSON.stringify(students));
-        }
-        catch (e) {
-            doErrorModal("Error Storing Data in Browser", "Sorry an error occurred storing data in your web browser. Please check the local storage settings and your available disk space.");
-        }
+            try {
+                localStorage.setItem("students", JSON.stringify(students));
+            }
+            catch (e) {
+                doErrorModal("Error Storing Data in Browser", "Sorry an error occurred storing data in your web browser. Please check the local storage settings and your available disk space.");
+            }
 
-        let htmlData = "";
+            let htmlData = "";
 
-        //console.log(students);
-        htmlData += `
+            //console.log(students);
+            htmlData += `
                 <table id="EnrolmentList" class="table table-sm table-hover">
                     <thead>
                         <tr>
@@ -515,32 +540,32 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                     </thead>
                     <tbody>`;
 
-        for (let student in students) {
-            let dateOfBirth = new Date(students[student].dob);
-            let dateOfBirthStr = ("0" + dateOfBirth.getDate()).slice(-2) + "/" + ("0" + (dateOfBirth.getMonth() + 1)).slice(-2) + "/" + dateOfBirth.getFullYear();
-            let attendPer = students[student].attendPer;
-            let appsButton = "";
-            let enrolsButton = "";
+            for (let student in students) {
+                let dateOfBirth = new Date(students[student].dob);
+                let dateOfBirthStr = ("0" + dateOfBirth.getDate()).slice(-2) + "/" + ("0" + (dateOfBirth.getMonth() + 1)).slice(-2) + "/" + dateOfBirth.getFullYear();
+                let attendPer = students[student].attendPer;
+                let appsButton = "";
+                let enrolsButton = "";
 
-            let attendRate = "";
+                let attendRate = "";
 
-            if (attendPer === 1) {
-                attendRate = "Excellent";
-            }
-            else if (attendPer >= 0.9000 && attendPer <= 0.9999) {
-                attendRate = "Good";
-            }
-            else if (attendPer >= 0.8500 && attendPer <= 0.8900) {
-                attendRate = "Poor";
-            }
-            else if (attendPer < 0.8500) {
-                attendRate = "VeryPoor";
-            }
-            else {
-                attendRate = "VeryPoor";
-            }
+                if (attendPer === 1) {
+                    attendRate = "Excellent";
+                }
+                else if (attendPer >= 0.9000 && attendPer <= 0.9999) {
+                    attendRate = "Good";
+                }
+                else if (attendPer >= 0.8500 && attendPer <= 0.8900) {
+                    attendRate = "Poor";
+                }
+                else if (attendPer < 0.8500) {
+                    attendRate = "VeryPoor";
+                }
+                else {
+                    attendRate = "VeryPoor";
+                }
 
-            let attendSummary = `
+                let attendSummary = `
                 <ul class='AttendSummary'>
                     <li>Planned: ${students[student].classesPlanned}</li>
                     <li>Counted: ${students[student].classesCounted}</li>
@@ -555,65 +580,65 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                     <li><strong>Category: ${attendRate}</strong></li>
                 </ul>`;
 
-            let riskSummary = `
+                let riskSummary = `
                 <ul class='RiskSummary'>
                     <li>Risk: ${students[student].riskName}</li>
                     <li>Risk Colour: ${students[student].riskColour}</li>
                 </ul>`;
 
-            let appsArr = null;
-            let appsList = "";
+                let appsArr = null;
+                let appsList = "";
 
-            if (students[student].appliedCoursesNextYear != null) {
-                appsArr = students[student].appliedCoursesNextYear.split(",");
+                if (students[student].appliedCoursesNextYear != null) {
+                    appsArr = students[student].appliedCoursesNextYear.split(",");
 
-                for (let app of appsArr) {
-                    appsList += `<li>${app}</li>`;
+                    for (let app of appsArr) {
+                        appsList += `<li>${app}</li>`;
+                    }
+
+                    appsList = `<ul>${appsList}</ul>`;
                 }
 
-                appsList = `<ul>${appsList}</ul>`;
-            }
+                let enrolsArr = null;
+                let enrolsList = "";
 
-            let enrolsArr = null;
-            let enrolsList = "";
+                if (students[student].enrolledCoursesNextYear != null) {
+                    enrolsArr = students[student].enrolledCoursesNextYear.split(",");
 
-            if (students[student].enrolledCoursesNextYear != null) {
-                enrolsArr = students[student].enrolledCoursesNextYear.split(",");
+                    for (let enrol of enrolsArr) {
+                        enrolsList += `<li>${enrol}</li>`;
+                    }
 
-                for (let enrol of enrolsArr) {
-                    enrolsList += `<li>${enrol}</li>`;
+                    enrolsList = `<ul>${enrolsList}</ul>`;
                 }
 
-                enrolsList = `<ul>${enrolsList}</ul>`;
-            }
-
-            if (students[student].numAppsNextYear > 0) {
-                appsButton = `
+                if (students[student].numAppsNextYear > 0) {
+                    appsButton = `
                     <button type="button" class="btn btn-outline-primary btn-sm LearnerPopover" data-toggle="popover" aria-describedby="${progressionYear} Applications for ${students[student].forename} ${students[student].surname}" data-content="${appsList}">
                         <i class="fas fa-envelope-open-text"></i> ${students[student].numAppsNextYear}
                     </button>`;
-            }
-            else {
-                appsButton = `
+                }
+                else {
+                    appsButton = `
                     <button type="button" class="btn btn-outline-primary btn-sm disabled">
                         <i class="fas fa-envelope-open-text"></i> ${students[student].numAppsNextYear}
                     </button>`;
-            }
+                }
 
-            if (students[student].numEnrolsNextYear > 0) {
-                enrolsButton = `
+                if (students[student].numEnrolsNextYear > 0) {
+                    enrolsButton = `
                     <button type="button" class="btn btn-outline-primary btn-sm LearnerPopover" data-toggle="popover" aria-describedby="${progressionYear} Enrolments for ${students[student].forename} ${students[student].surname}" data-content="${enrolsList}">
                         <i class="fas fa-user-graduate"></i> ${students[student].numEnrolsNextYear}
                     </button>`;
-            }
-            else {
-                enrolsButton = `
+                }
+                else {
+                    enrolsButton = `
                     <button type="button" class="btn btn-outline-primary btn-sm disabled">
                         <i class="fas fa-user-graduate"></i> ${students[student].numEnrolsNextYear}
                     </button>`;
-            }
+                }
 
-            htmlData += `
+                htmlData += `
                         <tr>
                             <th scope="row">${students[student].studentRef}</th>
                             <td>${students[student].surname}</td>
@@ -653,17 +678,24 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                                 </div>
                             </td>
                         </tr>`;
-        }
+            }
 
-        htmlData += `
+            htmlData += `
                     </tbody>
                 </table>`;
 
-        $("#StudentFromArea").html(htmlData);
-        console.log(dataToLoad + " Loaded");
+            $("#StudentFromArea").html(htmlData);
 
-        listLoadedStudentFunctions();
-    });
+            console.log(dataToLoad + " Loaded");
+
+            listLoadedStudentFunctions();
+        })
+        .fail(function () {
+            let title = `Error Loading Learners`;
+            let content = `Sorry an error occurred loading the list of learners. Please try again.`;
+
+            doErrorModal(title, content);
+        });
 }
 
 function listLoadedStudentFunctions() {
@@ -783,7 +815,9 @@ function populateDropDown(system, academicYear, domain, selectList) {
                 dataToLoad += `&system=${system}`;
             }
 
-            var destinationOptions = $.get(dataToLoad, function (data) {
+            $.get(dataToLoad, function (data) {
+                
+            }).then(data => {
                 let selectOptions = data.selectOptions;
 
                 //$(".DestinationOptionsSelectList").find('option').remove(); 
@@ -798,7 +832,13 @@ function populateDropDown(system, academicYear, domain, selectList) {
 
                 //setExistingDestinations();
                 resolve(1);
-            });
+            })
+                .fail(function () {
+                    let title = `Error Loading Drop Down Options`;
+                    let content = `Sorry an error occurred loading the list of dropdown values for "${domain}". Please try again.`;
+
+                    doErrorModal(title, content);
+                });
         }
         catch (e) {
             resolve(0);

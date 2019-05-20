@@ -35,10 +35,21 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
-                <p class="nav navbar-text navbar-right">Hello @User.Identity.Name.Split('\\').Last()!</p>
+                <p class="nav navbar-text navbar-right">@Model.UserGreeting, <i class="fas fa-user"></i> @Model.UserDetails</p>
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item">
                         <a class="nav-link" asp-page="/Index">Home</a>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="HelpDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Help
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="HelpDropdown">
+                            <a class="dropdown-item" href="#" id="ChangelogLink">Changelog</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" id="AboutSystemLink">About</a>
+                        </div>
                     </li>
                 </ul>
             </div>

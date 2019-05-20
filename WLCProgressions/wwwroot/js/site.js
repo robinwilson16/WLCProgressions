@@ -6,7 +6,33 @@ loadAllCourses(system, academicYear, hasEnrols);
 
 $(function () {
     $('[data-toggle="popover"]').popover();
-})
+});
+
+$("#AboutSystemLink").click(function (event) {
+    let title = `About WLC Progressions System`;
+    let content = `WLC Progressions System &copy; Ealing and Hammersmith West London College`;
+
+    doModal(title, content);
+});
+
+$("#ChangelogLink").click(function (event) {
+    let dataToLoad = `https://raw.githubusercontent.com/robinwilson16/WLCProgressions/master/README.md`;
+    let title = `Changelog for WLC Progressions System`;
+    let content = ``;
+
+    $.get(dataToLoad, function (data) {
+
+    })
+        .then(data => {
+        doModal(title, data);
+    })
+        .fail(function () {
+        let title = `Changelog for WLC Progressions System`;
+        let content = `Error loading content`;
+
+        doErrorModal(title, content);
+    });
+});
 
 $("#AcademicYearID").change(function (event) {
     $("#ChangeAcademicYearID").submit();

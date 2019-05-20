@@ -1,0 +1,45 @@
+ALTER PROCEDURE [dbo].[SPR_PRG_GetStaffMember]
+	@System NVARCHAR(20),
+    @AcademicYear NVARCHAR(5),
+    @StaffUserName NVARCHAR(50)
+    
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    DECLARE @SQLString NVARCHAR(MAX);
+    DECLARE @SQLParams NVARCHAR(MAX);
+
+	-- DECLARE @StudentRef varchar(50) = '11000000'
+	
+    SET @SQLString = 
+    N'SELECT
+        StaffRef = STF.StaffRefNo,
+        Forename = STF.FirstName,
+        Surname = UPPER ( SUBSTRING ( STF.Surname, 1, 1 ) ) + LOWER ( SUBSTRING ( STF.Surname, 2, LEN ( STF.Surname ) - 1 ) ),
+        StaffDetails = 
+            STF.FirstName
+            + '' ''
+            + UPPER ( SUBSTRING ( STF.Surname, 1, 1 ) ) + LOWER ( SUBSTRING ( STF.Surname, 2, LEN ( STF.Surname ) - 1 ) )
+            + '' (''
+            + STF.StaffRefNo
+            + '')''
+    FROM ' + @System + '.dbo._CCC_SystemUser SU
+    INNER JOIN ' + @System + '.dbo.Staff STF
+        ON STF.SystemUserID = SU.SystemUserID
+    WHERE
+        SU.UserName = @UserName';
+
+    SET @SQLParams = 
+        N'@System NVARCHAR(20),
+        @AcademicYear NVARCHAR(5),
+        @StaffUserName NVARCHAR(50)';
+
+    EXECUTE sp_executesql 
+        @SQLString, 
+        @SQLParams, 
+        @System = @System, 
+        @AcademicYear = @AcademicYear, 
+        @StaffUserName = @StaffUserName;
+END
+GO
