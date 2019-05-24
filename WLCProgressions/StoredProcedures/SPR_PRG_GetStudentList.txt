@@ -188,7 +188,7 @@ BEGIN
 				STUFF (
 					(
 						SELECT
-							'', '' + CRS2.Code + '' - '' + CRS2.Name
+							'', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' )
 						FROM ' + @System + '.dbo.Offering CRS2
 						INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC2
 							ON APPC2.OfferingID = CRS2.OfferingID
@@ -200,7 +200,8 @@ BEGIN
 							AND COALESCE ( APP2.CollegeDecisionID, 1 ) <> 0
 							AND COALESCE ( APP2.DecisionID, 1 ) = 1
 						ORDER BY
-							'', '' + CRS2.Code + '' - '' + CRS2.Name FOR XML PATH(''''),
+							'', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' ) 
+							FOR XML PATH(''''),
 							TYPE
 					).value(''.'',''varchar(max)''), 1, 2, ''''
 				)
@@ -235,7 +236,7 @@ BEGIN
                 STUFF (
                     (
                             SELECT
-                                '', '' + CRS2.Code + '' - '' + CRS2.Name
+                                '', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' )
                             FROM ' + @System + '.dbo.Offering CRS2
                             INNER JOIN ' + @System + '.dbo.Enrolment ENR2
                                 ON ENR2.OfferingID = CRS2.OfferingID
@@ -244,7 +245,8 @@ BEGIN
 								AND ENR2.StudentDetailID = SD.StudentDetailID
 								AND ENR2.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
                             ORDER BY
-                                '', '' + CRS2.Code + '' - '' + CRS2.Name FOR XML PATH(''''),
+                                '', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' ) 
+								FOR XML PATH(''''),
                                 TYPE
                     ).value(''.'',''varchar(max)''), 1, 2, ''''
                 )
