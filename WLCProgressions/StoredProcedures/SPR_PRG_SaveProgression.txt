@@ -15,6 +15,12 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
+	--LocalDestinationID codes 
+	DECLARE @ProgressionToFTSameDept INT = 40
+	DECLARE @ProgressionToPTSameDept INT = 26
+	DECLARE @ProgressionToFTDifDept INT = 25
+	DECLARE @ProgressionToPTDifDept INT = 41
+
     -- DECLARE @StudentRef VARCHAR(50) = '11000000'
     -- DECLARE @AcademicYear VARCHAR(5) = '18/19'
 	-- DECLARE @CourseFromID INT = 18957
@@ -43,6 +49,12 @@ BEGIN
             DECLARE @CourseIDCheck INT;
             DECLARE @Destination INT;
             DECLARE @StaffID INT;
+
+			DECLARE @ProgressionFT INT;
+			DECLARE @ProgressionPT INT;
+			DECLARE @ProgressionApp INT;
+			DECLARE @ProgressionHE INT;
+
             DECLARE @ErrorMsg NVARCHAR(255) = '';
 
             /*Check drop-down values are valid*/
@@ -102,6 +114,22 @@ BEGIN
                 @SQLParams, 
                 @Username = @Username, 
                 @StaffIDOUT = @StaffID OUTPUT;
+
+
+			IF @ProgressionType = 'INTERNAL'
+                BEGIN
+                    SET @ProgressionFT = @ProgressionToFTSameDept;
+					SET @ProgressionPT = @ProgressionToPTSameDept;
+					SET @ProgressionApp = @ProgressionToFTSameDept;
+					SET @ProgressionHE = @ProgressionToFTSameDept;
+                END
+            ELSE
+                BEGIN
+					SET @ProgressionFT = @ProgressionToFTDifDept;
+					SET @ProgressionPT = @ProgressionToPTDifDept;
+					SET @ProgressionApp = @ProgressionToFTDifDept;
+					SET @ProgressionHE = @ProgressionToFTDifDept;
+                END
             
             SET @SQLString = 
                 N'SELECT 
@@ -111,27 +139,27 @@ BEGIN
                             WHEN CRS.MajorFundingSourceID = ''001'' THEN 6 --Entered higher education
                             WHEN CRS.FundingID = 25 THEN
                                 CASE
-                                    WHEN COALESCE ( CRS.PlannedLearningHours1618, 0 ) + COALESCE ( CRS.PlannedEEPHours1618, 0 ) >= 540 THEN 44 --Other FE* (Full-Time)
-                                    ELSE 45 --Other FE* (Part-Time)
+                                    WHEN COALESCE ( CRS.PlannedLearningHours1618, 0 ) + COALESCE ( CRS.PlannedEEPHours1618, 0 ) >= 540 THEN @ProgressionFT
+                                    ELSE @ProgressionPT
                                 END
-                            WHEN CRS.FundingID = 36 THEN 20 --Entered Apprenticeship
+                            WHEN CRS.FundingID = 36 THEN @ProgressionApp
                             WHEN CRS.FundingID = 35 THEN
                                 CASE
-                                    WHEN CRS.ProgrammeTypeID IS NOT NULL THEN 20 --Entered Apprenticeship
+                                    WHEN CRS.ProgrammeTypeID IS NOT NULL THEN @ProgressionApp
                                     ELSE 
                                         CASE
-                                            WHEN COALESCE ( CRS.PlannedLearningHours19Plus, 0 ) + COALESCE ( CRS.PlannedEEPHours19Plus, 0 ) >= 540 THEN 44 --Other FE* (Full-Time)
-                                            ELSE 45 --Other FE* (Part-Time)
+                                            WHEN COALESCE ( CRS.PlannedLearningHours19Plus, 0 ) + COALESCE ( CRS.PlannedEEPHours19Plus, 0 ) >= 540 THEN @ProgressionFT
+                                            ELSE @ProgressionPT
                                         END
                                 END
                             WHEN CRS.OfferingTypeID = 1 THEN 
                                 CASE
-                                    WHEN COALESCE ( CRS.PlannedLearningHours1618, 0 ) + COALESCE ( CRS.PlannedEEPHours1618, 0 ) >= 540 THEN 44 --Other FE* (Full-Time)
-                                    ELSE 45 --Other FE* (Part-Time)
+                                    WHEN COALESCE ( CRS.PlannedLearningHours1618, 0 ) + COALESCE ( CRS.PlannedEEPHours1618, 0 ) >= 540 THEN @ProgressionFT
+                                    ELSE @ProgressionPT
                                 END
-                            WHEN CRS.OfferingTypeID = 4 THEN 6 --Entered higher education
-                            WHEN CRS.OfferingTypeID = 13 THEN 20 --Entered Apprenticeship
-                            ELSE 45 --Other FE* (Part-Time)
+                            WHEN CRS.OfferingTypeID = 4 THEN @ProgressionHE
+                            WHEN CRS.OfferingTypeID = 13 THEN @ProgressionApp
+                            ELSE @ProgressionPT
                         END
                 FROM ' + @System + '.dbo.Offering CRS 
                 LEFT JOIN ' + @System + '.dbo.OfferingGroup GRP
@@ -152,6 +180,10 @@ BEGIN
             SET @SQLParams = 
                 N'@CourseToID INT,
                 @GroupToID INT,
+				@ProgressionFT INT,
+				@ProgressionPT INT,
+				@ProgressionApp INT,
+				@ProgressionHE INT,
                 @CourseIDCheckOUT INT OUTPUT,
                 @DestinationOUT INT OUTPUT';
 
@@ -160,6 +192,10 @@ BEGIN
                 @SQLParams, 
                 @CourseToID = @CourseToID, 
                 @GroupToID = @GroupToID, 
+				@ProgressionFT = @ProgressionFT,
+				@ProgressionPT = @ProgressionPT,
+				@ProgressionApp = @ProgressionApp,
+				@ProgressionHE = @ProgressionHE,
                 @CourseIDCheckOUT = @CourseIDCheck OUTPUT,
                 @DestinationOUT = @Destination OUTPUT;
 
@@ -190,7 +226,12 @@ BEGIN
             /*Set IDs based on if progression is internal or external (cross dept)*/
             IF @ProgressionType = 'INTERNAL'
                 BEGIN
-                    SET @SQLString = 
+                    SET @ProgressionFT = @ProgressionToFTSameDept;
+					SET @ProgressionPT = @ProgressionToPTSameDept;
+					SET @ProgressionApp = @ProgressionToFTSameDept;
+					SET @ProgressionHE = @ProgressionToFTSameDept;
+					
+					SET @SQLString = 
                         N'SELECT TOP 1 
                             @ApplicationTypeIDOUT = APPT.ApplicationTypeID 
                         FROM ' + @System + '.dbo.ApplicationType APPT 
@@ -255,6 +296,11 @@ BEGIN
                 END
             ELSE
                 BEGIN
+					SET @ProgressionFT = @ProgressionToFTDifDept;
+					SET @ProgressionPT = @ProgressionToPTDifDept;
+					SET @ProgressionApp = @ProgressionToFTDifDept;
+					SET @ProgressionHE = @ProgressionToFTDifDept;
+
                     SET @SQLString = 
                         N'SELECT 
                             @ApplicationTypeIDOUT = APPT.ApplicationTypeID 

@@ -668,8 +668,8 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                             <td class="text-center">
                                 <div class="DestinationOptions" id="DestinationOptions-${students[student].studentRef}">
                                     <div class="custom-control custom-checkbox custom-control-inline" id="DestinationOptionsCheckbox-${students[student].studentRef}">
-                                        <input type="checkbox" id="HasCompleted-${students[student].studentRef}" class="custom-control-input HasCompleted" data-id="${students[student].studentRef}" />
-                                        <label class="custom-control-label" for="HasCompleted-${students[student].studentRef}">Not Progressing</label>
+                                        <input type="checkbox" id="RecordDestination-${students[student].studentRef}" class="custom-control-input RecordDestination" data-id="${students[student].studentRef}" />
+                                        <label class="custom-control-label" for="RecordDestination-${students[student].studentRef}">Record Destination</label>
                                     </div>
                                     <select id="DestinationOptionsSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select d-none DestinationOptionsSelectList" data-id="${students[student].studentRef}">
                                         <option value="" hidden disabled selected>Please select...</option>
@@ -753,7 +753,7 @@ function listLoadedStudentFunctions() {
         recordProgressionJson(studentRef, progressStudent);
     });
 
-    $(".HasCompleted").change(function (event) {
+    $(".RecordDestination").change(function (event) {
         let system = $("#SystemID").val();
         let academicYear = $("#AcademicYearID").val();
         let progressionYear = $("#ProgressionYearID").val();
@@ -858,7 +858,7 @@ function setExistingDestinations() {
             dropDown.val(selectedDestination);
 
             let destinationSelectList = $("#DestinationOptionsSelectList-" + studentRef);
-            $("#HasCompleted-" + studentRef).prop("checked", true);
+            $("#RecordDestination-" + studentRef).prop("checked", true);
             destinationSelectList.removeClass("d-none");
         }
     });
@@ -866,13 +866,13 @@ function setExistingDestinations() {
 
 function clearDestinationSelections(studentRef) {
     if (studentRef != null) {
-        $("#HasCompleted-" + studentRef).prop("checked", false);
-        $("#HasCompleted-" + studentRef).trigger("change");
+        $("#RecordDestination-" + studentRef).prop("checked", false);
+        $("#RecordDestination-" + studentRef).trigger("change");
         $("#DestinationOptionsSelectList-" + studentRef).val(null);
         $("#DestinationOptionsSelectList-" + studentRef).addClass("d-none");
     }
     else {
-        $(".HasCompleted").prop("checked", false);
+        $(".RecordDestination").prop("checked", false);
         $(".DestinationOptionsSelectList").val(null);
         $(".DestinationOptions").addClass("d-none");
         $(".DestinationOptionsSelectList").addClass("d-none");
