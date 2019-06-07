@@ -49,6 +49,7 @@ BEGIN
 		FROM ' + @System + '.dbo.LocalDestination DES
 		WHERE
 			DES.Enabled = 1
+			AND DES.IsAvailableWeb = 1
 			AND COALESCE ( DES.MinAcademicYearID, @AcademicYear ) <= @AcademicYear
 			AND COALESCE ( DES.MaxAcademicYearID, @AcademicYear ) >= @AcademicYear
 		ORDER BY

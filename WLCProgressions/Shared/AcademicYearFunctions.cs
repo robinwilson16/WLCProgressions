@@ -39,7 +39,7 @@ namespace WLCProgressions.Shared
                     .FromSql("EXEC SPR_PRG_Config")
                     .FirstOrDefaultAsync();
 
-            return ConfigData.AcademicYear; ;
+            return ConfigData.AcademicYear;
         }
 
         public static async Task<string> GetProgressionYear(string academicYear, ApplicationDbContext _context)

@@ -744,10 +744,10 @@ function listLoadedStudentFunctions() {
 
         if (progressStudent === true) {
             clearDestinationSelections(studentRef);
-            destinationOptions.hide();
+            destinationOptions.addClass("d-none");
         }
         else {
-            destinationOptions.show();
+            destinationOptions.removeClass("d-none");
         }
 
         recordProgressionJson(studentRef, progressStudent);
@@ -870,6 +870,7 @@ function clearDestinationSelections(studentRef) {
         $("#RecordDestination-" + studentRef).trigger("change");
         $("#DestinationOptionsSelectList-" + studentRef).val(null);
         $("#DestinationOptionsSelectList-" + studentRef).addClass("d-none");
+        $(".DestinationOptions").removeClass("d-none");
     }
     else {
         $(".RecordDestination").prop("checked", false);
