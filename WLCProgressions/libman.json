@@ -17,6 +17,11 @@
     {
       "library": "marked@0.6.2",
       "destination": "wwwroot/lib/marked/"
+    },
+    {
+      "provider": "cdnjs",
+      "library": "Chart.js@2.8.0",
+      "destination": "wwwroot/lib/Chart.js/"
     }
   ]
 }

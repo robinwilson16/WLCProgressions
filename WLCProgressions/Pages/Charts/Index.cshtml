@@ -1,0 +1,54 @@
+﻿@page
+@model WLCProgressions.Pages.Charts.IndexModel
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-page="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.ChartData[0].Title)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ChartData[0].Total)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ChartData[0].Number)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ChartData[0].Value)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model.ChartData) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Title)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Total)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Number)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Value)
+            </td>
+            <td>
+                <a asp-page="./Edit" asp-route-id="@item.ChartDataID">Edit</a> |
+                <a asp-page="./Details" asp-route-id="@item.ChartDataID">Details</a> |
+                <a asp-page="./Delete" asp-route-id="@item.ChartDataID">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

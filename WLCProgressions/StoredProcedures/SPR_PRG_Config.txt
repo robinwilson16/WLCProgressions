@@ -8,6 +8,5 @@ BEGIN
         ProgressionYear = CAST ( CAST ( LEFT ( CFG.Value, 2 )  AS INT ) + 1 AS VARCHAR(2) ) + '/' + CAST ( CAST ( RIGHT ( CFG.Value, 2 )  AS INT ) + 1 AS VARCHAR(2) )
     FROM Config CFG
     WHERE
-        CFG.ConfigID = 'PRG_AcademicYearID'
+        CFG.ConfigID = 'PMO_AcademicYearID'
 END
-GO

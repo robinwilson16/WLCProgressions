@@ -79,13 +79,14 @@ $(".CourseSearchBox").keydown(function (event) {
 
 $(".CourseSearchBox").keyup(function (event) {
     event.preventDefault();
-
+    
     var searchField = $(this);
     let searchTypeFld = $(this).attr("aria-label");
     let progressWithinFac = $("#ProgressWithinFac").val();
     let progressWithinTeam = $("#ProgressWithinTeam").val();
     let fac = null;
     let team = null;
+    let outstandingOnly = false;
 
     let searchType = "";
 
@@ -107,12 +108,26 @@ $(".CourseSearchBox").keyup(function (event) {
     // Only perform search if enough characters have been entered
     if (searchField.val().length >= minSearchChars) {
         //loadCourseGroup(search);
-        filterCourses(searchField, searchType, fac, team);
+        filterCourses(searchField, searchType, outstandingOnly, fac, team);
     }
     else {
         noResultsCourses(searchType);
     }
 });
+
+$(".OutstandingCoursesButton").click(function (event) {
+    event.preventDefault();
+
+    var searchField = null;
+    let fac = null;
+    let team = null;
+    let searchType = "From";
+    let outstandingOnly = true;
+
+    $(".CourseSearchBox").val("");
+    filterCourses(searchField, searchType, outstandingOnly, fac, team);
+});
+
 
 $(".CheckAllStudents").click(function (event) {
     let selectAllStudents = $(this).prop("checked");

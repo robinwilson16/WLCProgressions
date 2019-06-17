@@ -52,5 +52,14 @@ namespace WLCProgressions.Models
         public string GroupName { get; set; }
 
         public int Enrolments { get; set; }
+
+        public int HasProgression { get; set; }
+        public int HasDestination { get; set; }
+        public int HasValidDestination { get; set; }
+        public int HasProgressionDestination { get; set; }
+        public int CompletedRecords { get; set; }
+        public double CompletedRecordsPer { get; set; }
+        public int OutstandingRecords { get; set; }
+        public double OutstandingRecordsPer { get; set; }
     }
 }

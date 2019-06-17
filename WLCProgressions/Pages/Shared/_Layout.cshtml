@@ -9,6 +9,7 @@
         <link rel="stylesheet" href="~/lib/twitter-bootstrap/css/bootstrap.css" />
         <link rel="stylesheet" href="~/lib/font-awesome/css/all.css" />
         <link rel="stylesheet" href="~/css/slider.css" />
+        <link rel="stylesheet" href="~/lib/Chart.js/Chart.min.css" />
     </environment>
     <environment exclude="Development">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css"
@@ -20,6 +21,7 @@
               asp-fallback-href="~/lib/font-awesome/css/all.min.css"
               asp-fallback-test-class="sr-only" asp-fallback-test-property="position" asp-fallback-test-value="absolute" />
         <link rel="stylesheet" href="~/css/slider.css" asp-append-version="true" />
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.css" asp-append-version="true" />
     </environment>
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
@@ -85,6 +87,7 @@
         <script src="~/lib/jquery/dist/jquery.js" asp-append-version="true"></script>
         <script src="~/lib/twitter-bootstrap/js/bootstrap.bundle.js" asp-append-version="true"></script>
         <script src="~/lib/marked/marked.js" asp-append-version="true"></script>
+        <script src="~/lib/Chart.js/Chart.min.js"></script>
     </environment>
     <environment exclude="Development">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
@@ -98,6 +101,10 @@
                 crossorigin="anonymous">
         </script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/0.6.2/marked.min.js"
+                crossorigin="anonymous">
+        </script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js" 
+                asp-append-version="true"
                 crossorigin="anonymous">
         </script>
     </environment>

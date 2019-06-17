@@ -16,6 +16,7 @@ namespace WLCProgressions.Data
         }
 
         public DbSet<Config> Config { get; set; }
+        public DbSet<ChartData> ChartData { get; set; }
         public DbSet<CourseGroup> CourseGroup { get; set; }
         public DbSet<Progression> Progression { get; set; }
         public DbSet<SelectListData> SelectListData { get; set; }

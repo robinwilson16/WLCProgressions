@@ -40,20 +40,29 @@ function loadAllCourses(system, academicYear, hasEnrols) {
     });
 }
 
-function filterCourses(searchField, searchType, fac, team) {
+function filterCourses(searchField, searchType, outstandingOnly, fac, team) {
     return new Promise(resolve => {
         let allCourses = JSON.parse(localStorage.getItem("courses"));
         let filteredCourses = allCourses.courses;
 
-        let searchFieldVal = searchField.val().toLowerCase();
+        let searchFieldVal = null;
 
         //Filter the list
         //filteredCourses = filteredCourses.filter(courses => courses.courseCode === "STOXX11001-SPA");
-        filteredCourses = filteredCourses.filter(
-            courses =>
-                courses.courseTitle.toLowerCase().indexOf(searchFieldVal) !== -1
-                || courses.courseCode.toLowerCase().indexOf(searchFieldVal) !== -1
-        );
+
+        if (searchField !== null && typeof searchField !== "undefined") {
+            searchFieldVal = searchField.val().toLowerCase();
+
+            filteredCourses = filteredCourses.filter(
+                courses =>
+                    courses.courseTitle.toLowerCase().indexOf(searchFieldVal) !== -1
+                    || courses.courseCode.toLowerCase().indexOf(searchFieldVal) !== -1
+            );
+        }
+
+        if (outstandingOnly === true) {
+            filteredCourses = filteredCourses.filter(courses => courses.outstandingRecords > 0);
+        }
 
         if (fac != null) {
             filteredCourses = filteredCourses.filter(courses => courses.facCode === fac);
@@ -112,6 +121,7 @@ function displayCourses(searchType) {
                         <th scope="col">Course Title</th>
                         <th scope="col">Group</th>
                         <th scope="col">Enrols</th>
+                        <th scope="col">Processed So Far</th>
                         <th scope="col">Progress</th>`;
         }
         else {
@@ -136,6 +146,25 @@ function displayCourses(searchType) {
             }
 
             let courseGroup = courses[i].courseCode;
+            let completedRecordsPer = courses[i].completedRecordsPer;
+
+            let progressRate = "";
+
+            if (completedRecordsPer === 1) {
+                progressRate = "Excellent";
+            }
+            else if (completedRecordsPer >= 0.9000 && completedRecordsPer <= 0.9999) {
+                progressRate = "Good";
+            }
+            else if (completedRecordsPer >= 0.8500 && completedRecordsPer <= 0.8900) {
+                progressRate = "Poor";
+            }
+            else if (completedRecordsPer < 0.8500) {
+                progressRate = "VeryPoor";
+            }
+            else {
+                progressRate = "VeryPoor";
+            }
 
             if (courses[i].groupCode !== null) {
                 courseGroup += "-" + courses[i].groupCode;
@@ -150,6 +179,13 @@ function displayCourses(searchType) {
                         <td>${courses[i].courseTitle}</td>
                         <td>${courses[i].groupCode}</td>
                         <td>${courses[i].enrolments}</td>
+                        <td class="text-center">
+                            <div class="ProgressPercent ${progressRate}">
+                                <div class="ProgressValue">${+(completedRecordsPer * 100).toFixed(1)}&percnt;</div>
+                                <div class="ProgressBar" style="width: ${completedRecordsPer * 100}%">
+                                </div>
+                            </div>
+                        </td>
                         <td>`;
 
                 if (courses[i].enrolments > 0) {
