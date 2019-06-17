@@ -870,7 +870,7 @@ function clearDestinationSelections(studentRef) {
         $("#RecordDestination-" + studentRef).trigger("change");
         $("#DestinationOptionsSelectList-" + studentRef).val(null);
         $("#DestinationOptionsSelectList-" + studentRef).addClass("d-none");
-        $(".DestinationOptions").removeClass("d-none");
+        $(".DestinationOptions-" + studentRef).removeClass("d-none");
     }
     else {
         $(".RecordDestination").prop("checked", false);
