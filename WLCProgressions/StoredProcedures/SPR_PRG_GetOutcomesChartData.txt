@@ -1,6 +1,7 @@
 CREATE PROCEDURE [dbo].[SPR_PRG_GetOutcomesChartData]
 	@System NVARCHAR(20),
     @AcademicYear NVARCHAR(5),
+	@Measure NVARCHAR(20),
     @Level INT
 AS
 BEGIN
@@ -8,24 +9,54 @@ BEGIN
 	
 	--DECLARE @System NVARCHAR(20) = 'ProSolution'
 	--DECLARE @AcademicYear NVARCHAR(5) = '18/19'
+	--DECLARE @MeasureValue NVARCHAR(20) = 'Outstanding'
 	--DECLARE @Level INT = 4
 	
-	DECLARE @SQLGroupBy NVARCHAR(MAX);
 	DECLARE @SQLChartTitle NVARCHAR(MAX);
+	DECLARE @MeasureValue NVARCHAR(MAX); 
+	DECLARE @SQLGroupBy NVARCHAR(MAX);
     DECLARE @SQLString NVARCHAR(MAX);
     DECLARE @SQLParams NVARCHAR(MAX);
 
-	SET @SQLChartTitle = 
-		N'
-		''Outstanding Progressions by ''
-		+ CASE
-			WHEN @Level = 1 THEN ''Year''
-			WHEN @Level = 2 THEN ''Faculty''
-			WHEN @Level = 3 THEN ''Team''
-			WHEN @Level = 4 THEN ''Course''
-			ELSE ''Year''
-		END';
+	--Temporary
+	SET @Measure = 'Outstanding'
 
+	IF(@Measure = 'Outstanding')
+	BEGIN
+		SET @SQLChartTitle = 
+			N'
+			''Outstanding Progressions by ''
+			+ CASE
+				WHEN @Level = 1 THEN ''Year''
+				WHEN @Level = 2 THEN ''Faculty''
+				WHEN @Level = 3 THEN ''Team''
+				WHEN @Level = 4 THEN ''Course''
+				ELSE ''Year''
+			END';
+
+		SET @MeasureValue = 
+			N'
+			SUM ( COALESCE ( ENR.Enrolments, 0 ) ) - SUM ( COALESCE ( PRG.HasValidProgressionDestination, 0 ) )';
+	END
+	ELSE
+	BEGIN
+		SET @SQLChartTitle = 
+			N'
+			''Recorded Progressions by ''
+			+ CASE
+				WHEN @Level = 1 THEN ''Year''
+				WHEN @Level = 2 THEN ''Faculty''
+				WHEN @Level = 3 THEN ''Team''
+				WHEN @Level = 4 THEN ''Course''
+				ELSE ''Year''
+			END';
+
+		SET @MeasureValue = 
+			N'
+			SUM ( COALESCE ( PRG.HasValidProgressionDestination, 0 ) )';
+	END
+
+	
 	SET @SQLGroupBy = 
 		N'
 		CASE
@@ -62,13 +93,13 @@ BEGIN
 			Title = 
 				' + @SQLGroupBy + ',
 			Total = SUM ( COALESCE ( ENR.Enrolments, 0 ) ),
-			Number = SUM ( COALESCE ( ENR.Enrolments, 0 ) ) - SUM ( COALESCE ( PRG.HasValidProgressionDestination, 0 ) ),
+			Number = ' + @MeasureValue + ',
 			Value = 
 				ROUND (
 					CASE
 						WHEN SUM ( COALESCE ( ENR.Enrolments, 0 ) ) = 0 THEN 0
 						ELSE
-							CAST ( SUM ( COALESCE ( ENR.Enrolments, 0 ) ) - SUM ( COALESCE ( PRG.HasValidProgressionDestination, 0 ) ) AS FLOAT ) / CAST ( SUM ( COALESCE ( ENR.Enrolments, 0 ) ) AS FLOAT )
+							CAST ( ' + @MeasureValue + ' AS FLOAT ) / CAST ( SUM ( COALESCE ( ENR.Enrolments, 0 ) ) AS FLOAT )
 					END
 				, 4 ),
 			Type = ''Percent''

@@ -10,7 +10,9 @@
     margin-top: 20px;
 }
 
-.ChartLoading h1 {
+.ChartLoading h1,
+.ChartPopupLoading h1 {
+    text-align: center;
     margin-top: 70px;
     margin-bottom: 70px;
     font-size: 3em;

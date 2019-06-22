@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,31 +27,35 @@ namespace WLCProgressions.Pages.Charts
 
         public IList<ChartData> ChartData { get;set; }
 
-        public async Task OnGetAsync(string system, string academicYear, int level)
+        public async Task OnGetAsync(string system, string academicYear, string measure, int level)
         {
             //ChartData = await _context.ChartData.ToListAsync();
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
             var systemParam = new SqlParameter("@System", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
             var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
+            var measureParam = new SqlParameter("@Measure", SqlDbType.NVarChar);
+            measureParam.Value = (object)measure ?? DBNull.Value;
             var levelParam = new SqlParameter("@Level", level);
 
             ChartData = await _context.ChartData
-                .FromSql("EXEC SPR_PRG_GetOutcomesChartData @System, @AcademicYear, @Level", systemParam, academicYearParam, levelParam)
+                .FromSql("EXEC SPR_PRG_GetOutcomesChartData @System, @AcademicYear, @Measure, @Level", systemParam, academicYearParam, measureParam, levelParam)
                 .ToListAsync();
         }
 
-        public async Task<JsonResult> OnGetJsonAsync(string system, string academicYear, int level)
+        public async Task<JsonResult> OnGetJsonAsync(string system, string academicYear, string measure, int level)
         {
             //ChartData = await _context.ChartData.ToListAsync();
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
             var systemParam = new SqlParameter("@System", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
             var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
+            var measureParam = new SqlParameter("@Measure", SqlDbType.NVarChar);
+            measureParam.Value = (object)measure ?? DBNull.Value;
             var levelParam = new SqlParameter("@Level", level);
 
             ChartData = await _context.ChartData
-                .FromSql("EXEC SPR_PRG_GetOutcomesChartData @System, @AcademicYear, @Level", systemParam, academicYearParam, levelParam)
+                .FromSql("EXEC SPR_PRG_GetOutcomesChartData @System, @AcademicYear, @Measure, @Level", systemParam, academicYearParam, measureParam, levelParam)
                 .ToListAsync();
 
             var collectionWrapper = new

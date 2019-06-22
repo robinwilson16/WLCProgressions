@@ -17,5 +17,31 @@ namespace WLCProgressions.Models
         public int Total { get; set; }
         public int Number { get; set; }
         public double Value { get; set; }
+
+        [StringLength(20)]
+        public string Type { get; set; }
+
+        public int Level { get; set; }
+
+        [StringLength(5)]
+        public string AcademicYear { get; set; }
+
+        [StringLength(12)]
+        public string FacCode { get; set; }
+
+        [StringLength(150)]
+        public string FacName { get; set; }
+
+        [StringLength(12)]
+        public string TeamCode { get; set; }
+
+        [StringLength(150)]
+        public string TeamName { get; set; }
+
+        [StringLength(24)]
+        public string CourseCode { get; set; }
+
+        [StringLength(255)]
+        public string CourseTitle { get; set; }
     }
 }

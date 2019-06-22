@@ -65,11 +65,39 @@
     </div>
     <div class="row">
         <div class="col-md text-center">
-            <div id="ChartLoading" class="ChartLoading">
-                <h1><i class="fas fa-spinner fa-spin"></i></h1>
+            <div class="d-lg-inline-flex flex-lg-row-reverse w-100">
+                <ul class="nav w-25 nav-pills nav-fill ml-auto justify-content-end d-lg-inline-flex">
+                    <li class="nav-item">
+                        <div class="card">
+                                <h4 id="NumOutstandingRecords" class="CountUp">0</h4> records to go
+                        </div>
+                    </li>
+                </ul>
+                <ul class="nav w-100 nav-tabs" id="myTab" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="chart-tab" data-toggle="tab" href="#ChartArea" role="tab" aria-controls="ChartArea" aria-selected="true">Chart</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="table-tab" data-toggle="tab" href="#TableArea" role="tab" aria-controls="TableArea" aria-selected="false">Table</a>
+                    </li>
+                </ul>
             </div>
-            <div id="OutcomesProgressChartContainer" class="chart-container d-none OutcomesProgressChartContainer">
-                <canvas id="OutcomesProgressChart" style="width:100%; height:200px"></canvas>
+            <div class="tab-content" id="myTabContent">
+                <div class="tab-pane fade show active" id="ChartArea" role="tabpanel" aria-labelledby="chart-tab">
+                    <div id="ChartLoading" class="ChartLoading">
+                        <h1><i class="fas fa-spinner fa-spin"></i></h1>
+                    </div>
+                    <div id="OutcomesProgressChartContainer" class="chart-container d-none OutcomesProgressChartContainer">
+                        <canvas id="OutcomesProgressChart" style="width:100%; height:200px"></canvas>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="TableArea" role="tabpanel" aria-labelledby="table-tab">
+                    <div id="TableLoading" class="TableLoading">
+                        <h1><i class="fas fa-spinner fa-spin"></i></h1>
+                    </div>
+                    <div id="OutcomesProgressTableContainer" class="d-none">
+                    </div>
+                </div>
             </div>
         </div>
     </div>

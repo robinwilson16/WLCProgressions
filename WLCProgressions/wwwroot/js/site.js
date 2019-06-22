@@ -413,3 +413,17 @@ $(".SaveDestinationButton").click(function (event) {
         doModal("Please Review Your Selection", errors);
     }
 });
+
+$("#ChartModal").on("shown.bs.modal", function () {
+    let areaCode = $("#AreaCode").val();
+    let areaLevel = $("#AreaLevel").val();
+    let measureType = $("#MeasureType").val();
+
+    loadCharts(areaLevel, "popup", measureType);
+});
+
+$("#ChartModal").on("hidden.bs.modal", function (e) {   
+    $("#OutcomesProgressChartPopupContainer").addClass("d-none");
+    $("#OutcomesProgressTablePopupContainer").addClass("d-none");
+    $("#PopupLoading").show();
+});
