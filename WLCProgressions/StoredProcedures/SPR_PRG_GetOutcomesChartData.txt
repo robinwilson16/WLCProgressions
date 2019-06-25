@@ -2,19 +2,24 @@ CREATE PROCEDURE [dbo].[SPR_PRG_GetOutcomesChartData]
 	@System NVARCHAR(20),
     @AcademicYear NVARCHAR(5),
 	@Measure NVARCHAR(20),
-    @Level INT
+    @Level INT,
+	@Drill NVARCHAR(24)
 AS
 BEGIN
 	SET NOCOUNT ON;
 	
 	--DECLARE @System NVARCHAR(20) = 'ProSolution'
 	--DECLARE @AcademicYear NVARCHAR(5) = '18/19'
-	--DECLARE @MeasureValue NVARCHAR(20) = 'Outstanding'
+	--DECLARE @Measure NVARCHAR(20) = 'Outstanding'
 	--DECLARE @Level INT = 4
+	--DECLARE @Drill NVARCHAR(24) = NULL
 	
 	DECLARE @SQLChartTitle NVARCHAR(MAX);
 	DECLARE @MeasureValue NVARCHAR(MAX); 
-	DECLARE @SQLGroupBy NVARCHAR(MAX);
+	DECLARE @AdditionalFields NVARCHAR(MAX); 
+	DECLARE @AdditionalFieldsGroupBy NVARCHAR(MAX); 
+	DECLARE @ValueField NVARCHAR(MAX);
+	DECLARE @DrillToArea NVARCHAR(MAX) = N'';
     DECLARE @SQLString NVARCHAR(MAX);
     DECLARE @SQLParams NVARCHAR(MAX);
 
@@ -57,7 +62,7 @@ BEGIN
 	END
 
 	
-	SET @SQLGroupBy = 
+	SET @ValueField = 
 		N'
 		CASE
 			WHEN @Level = 1 THEN CRS.AcademicYearID
@@ -75,14 +80,127 @@ BEGIN
 						RTRIM ( TEAM.Code ) + '' - '' + TEAM.Name
 				END
 			WHEN @Level = 4 THEN
-				RTRIM ( COALESCE ( FAC.Code, ''00'' ) ) + '' - '' + RTRIM ( COALESCE ( TEAM.Code, ''00'' ) ) + '' - '' + 
-				CASE
+				RTRIM ( COALESCE ( FAC.Code, ''00'' ) ) + '' - '' + RTRIM ( COALESCE ( TEAM.Code, ''00'' ) ) + '' - '' 
+				+ CASE
 					WHEN CRS.Code IS NULL THEN ''00 - Unknown''
 					ELSE
 						RTRIM ( CRS.Code ) + '' - '' + CRS.Name
+				END 
+				+ CASE
+					WHEN GRP.Code IS NULL THEN ''''
+					ELSE
+						'' - '' + GRP.Code
 				END
 			ELSE CRS.AcademicYearID
 		END';
+
+	IF( COALESCE ( @Level, 1 ) = 1)
+	BEGIN
+		SET @AdditionalFields =
+			N'
+			AcademicYear = @AcademicYear,
+			FacCode = NULL,
+			FacName = NULL,
+			TeamCode = NULL,
+			TeamName = NULL,
+			CourseID = NULL,
+			CourseCode = NULL,
+			CourseTitle = NULL,
+			GroupID = NULL,
+			GroupCode = NULL,
+			GroupName = NULL';
+
+		SET @AdditionalFieldsGroupBy =
+			N'
+			CRS.AcademicYearID';
+	END
+	ELSE IF( COALESCE ( @Level, 1 ) = 2)
+	BEGIN
+		SET @AdditionalFields =
+			N'
+			AcademicYear = @AcademicYear,
+			FacCode = COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
+			FacName = COALESCE ( FAC.Name, ''-- Unknown --'' ),
+			TeamCode = NULL,
+			TeamName = NULL,
+			CourseID = NULL,
+			CourseCode = NULL,
+			CourseTitle = NULL,
+			GroupID = NULL,
+			GroupCode = NULL,
+			GroupName = NULL';
+
+		SET @AdditionalFieldsGroupBy =
+			N'
+			COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
+			COALESCE ( FAC.Name, ''-- Unknown --'' )';
+	END
+	ELSE IF( COALESCE ( @Level, 1 ) = 3)
+	BEGIN
+		SET @AdditionalFields =
+			N'
+			AcademicYear = @AcademicYear,
+			FacCode = COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
+			FacName = COALESCE ( FAC.Name, ''-- Unknown --'' ),
+			TeamCode = COALESCE ( RTRIM ( TEAM.Code ), ''00'' ),
+			TeamName = COALESCE ( TEAM.Name, ''-- Unknown --'' ),
+			CourseID = NULL,
+			CourseCode = NULL,
+			CourseTitle = NULL,
+			GroupID = NULL,
+			GroupCode = NULL,
+			GroupName = NULL';
+
+		SET @AdditionalFieldsGroupBy =
+			N'
+			COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
+			COALESCE ( FAC.Name, ''-- Unknown --'' ),
+			COALESCE ( RTRIM ( TEAM.Code ), ''00'' ),
+			COALESCE ( TEAM.Name, ''-- Unknown --'' )';
+		
+		IF @Drill IS NOT NULL
+		BEGIN
+			SET @DrillToArea =
+			N'
+			AND FAC.Code = @Drill';
+		END
+	END
+	ELSE IF( COALESCE ( @Level, 1 ) = 4)
+	BEGIN
+		SET @AdditionalFields =
+			N'
+			AcademicYear = @AcademicYear,
+			FacCode = COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
+			FacName = COALESCE ( FAC.Name, ''-- Unknown --'' ),
+			TeamCode = COALESCE ( RTRIM ( TEAM.Code ), ''00'' ),
+			TeamName = COALESCE ( TEAM.Name, ''-- Unknown --'' ),
+			CourseID = CRS.OfferingID,
+			CourseCode = COALESCE ( CRS.Code, ''UNK'' ),
+			CourseTitle = COALESCE ( CRS.Name, ''-- Unknown --'' ),
+			GroupID = GRP.OfferingGroupID,
+			GroupCode = COALESCE ( GRP.Code, ''UNK'' ),
+			GroupName = COALESCE ( GRP.Description, ''-- Unknown --'' )';
+
+		SET @AdditionalFieldsGroupBy =
+			N'
+			COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
+			COALESCE ( FAC.Name, ''-- Unknown --'' ),
+			COALESCE ( RTRIM ( TEAM.Code ), ''00'' ),
+			COALESCE ( TEAM.Name, ''-- Unknown --'' ),
+			CRS.OfferingID,
+			COALESCE ( CRS.Code, ''UNK'' ),
+			COALESCE ( CRS.Name, ''-- Unknown --'' ),
+			GRP.OfferingGroupID,
+			COALESCE ( GRP.Code, ''UNK'' ),
+			COALESCE ( GRP.Description, ''-- Unknown --'' )';
+
+		IF @Drill IS NOT NULL
+		BEGIN
+			SET @DrillToArea =
+			N'
+			AND TEAM.Code = @Drill';
+		END
+	END
 
     SET @SQLString = 
 		N'
@@ -91,7 +209,7 @@ BEGIN
 			ChartTitle = 
 				' + @SQLChartTitle + ',
 			Title = 
-				' + @SQLGroupBy + ',
+				' + @ValueField + ',
 			Total = SUM ( COALESCE ( ENR.Enrolments, 0 ) ),
 			Number = ' + @MeasureValue + ',
 			Value = 
@@ -102,7 +220,9 @@ BEGIN
 							CAST ( ' + @MeasureValue + ' AS FLOAT ) / CAST ( SUM ( COALESCE ( ENR.Enrolments, 0 ) ) AS FLOAT )
 					END
 				, 4 ),
-			Type = ''Percent''
+			Type = ''Percent'',
+			Level = CAST ( @Level AS INT ),
+			' + @AdditionalFields + '
 		FROM ' + @System + '.dbo.Offering CRS
 		INNER JOIN ' + @System + '.dbo.Site STE
 			ON STE.SiteID = CRS.SiteID
@@ -263,23 +383,27 @@ BEGIN
 			AND CRS.OfferingStatusID IN ( ''1'', ''3'' ) --Live and pending only
 			AND CLD.SubOfferingID IS NULL --Is a parent (has no parents itself)
 			AND COALESCE ( ENR.Enrolments, 0 ) > 0
+			' + @DrillToArea + '
 		GROUP BY
-			' + @SQLGroupBy + '
+			' + @ValueField + ',
+			' + @AdditionalFieldsGroupBy + '
 		ORDER BY
-			' + @SQLGroupBy;
+			' + @ValueField;
 
 	--SELECT @SQLString AS [processing-instruction(x)] FOR XML PATH('')
 
     SET @SQLParams = 
         N'@System NVARCHAR(20),
         @AcademicYear NVARCHAR(5),
-        @Level NVARCHAR(10)';
+        @Level NVARCHAR(10),
+		@Drill NVARCHAR(24)';
 
     EXECUTE sp_executesql 
         @SQLString, 
         @SQLParams, 
         @System = @System, 
         @AcademicYear = @AcademicYear, 
-        @Level = @Level;
+        @Level = @Level,
+		@Drill = @Drill;
 
 END

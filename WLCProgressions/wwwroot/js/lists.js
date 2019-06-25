@@ -367,6 +367,9 @@ function listLoadedCourseFromFunctions() {
         $("#AcademicYearID").val(academicYear);
 
         displayStudents(system, systemILP, academicYear, progressionYear, courseID, groupID);
+
+        //Scroll down page
+        $("html, body").animate({ scrollTop: $("#StudentFromArea").offset().top }, "slow");
     });
 }
 

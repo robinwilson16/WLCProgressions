@@ -419,11 +419,16 @@ $("#ChartModal").on("shown.bs.modal", function () {
     let areaLevel = $("#AreaLevel").val();
     let measureType = $("#MeasureType").val();
 
-    loadCharts(areaLevel, "popup", measureType);
+    $("#ChartIsPopup").val("Y");
+
+    loadCharts(areaLevel, areaCode, "popup", measureType);
 });
 
 $("#ChartModal").on("hidden.bs.modal", function (e) {   
     $("#OutcomesProgressChartPopupContainer").addClass("d-none");
     $("#OutcomesProgressTablePopupContainer").addClass("d-none");
+
+    $("#ChartIsPopup").val("N");
+
     $("#PopupLoading").show();
 });

@@ -27,7 +27,7 @@ namespace WLCProgressions.Pages.Charts
 
         public IList<ChartData> ChartData { get;set; }
 
-        public async Task OnGetAsync(string system, string academicYear, string measure, int level)
+        public async Task OnGetAsync(string system, string academicYear, string measure, int level, string drill)
         {
             //ChartData = await _context.ChartData.ToListAsync();
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
@@ -37,13 +37,15 @@ namespace WLCProgressions.Pages.Charts
             var measureParam = new SqlParameter("@Measure", SqlDbType.NVarChar);
             measureParam.Value = (object)measure ?? DBNull.Value;
             var levelParam = new SqlParameter("@Level", level);
+            var drillParam = new SqlParameter("@Drill", SqlDbType.NVarChar);
+            drillParam.Value = (object)drill ?? DBNull.Value;
 
             ChartData = await _context.ChartData
-                .FromSql("EXEC SPR_PRG_GetOutcomesChartData @System, @AcademicYear, @Measure, @Level", systemParam, academicYearParam, measureParam, levelParam)
+                .FromSql("EXEC SPR_PRG_GetOutcomesChartData @System, @AcademicYear, @Measure, @Level, @Drill", systemParam, academicYearParam, measureParam, levelParam, drillParam)
                 .ToListAsync();
         }
 
-        public async Task<JsonResult> OnGetJsonAsync(string system, string academicYear, string measure, int level)
+        public async Task<JsonResult> OnGetJsonAsync(string system, string academicYear, string measure, int level, string drill)
         {
             //ChartData = await _context.ChartData.ToListAsync();
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
@@ -53,9 +55,11 @@ namespace WLCProgressions.Pages.Charts
             var measureParam = new SqlParameter("@Measure", SqlDbType.NVarChar);
             measureParam.Value = (object)measure ?? DBNull.Value;
             var levelParam = new SqlParameter("@Level", level);
+            var drillParam = new SqlParameter("@Drill", SqlDbType.NVarChar);
+            drillParam.Value = (object)drill ?? DBNull.Value;
 
             ChartData = await _context.ChartData
-                .FromSql("EXEC SPR_PRG_GetOutcomesChartData @System, @AcademicYear, @Measure, @Level", systemParam, academicYearParam, measureParam, levelParam)
+                .FromSql("EXEC SPR_PRG_GetOutcomesChartData @System, @AcademicYear, @Measure, @Level, @Drill", systemParam, academicYearParam, measureParam, levelParam, drillParam)
                 .ToListAsync();
 
             var collectionWrapper = new

@@ -1,7 +1,14 @@
-﻿loadCharts(2, "screen", "both");
-function loadCharts(level, displayType, measureType) {
+﻿var chartValueDivider = " - ";
+var chartMinHeight = 450;
+
+loadCharts(2, null, "screen", "both");
+function loadCharts(level, drill, displayType, measureType) {
     return new Promise(resolve => {
         let dataToLoad = `/Charts/?handler=Json&level=${level}`;
+
+        if (drill !== null) {
+            dataToLoad += `&drill=${drill}`;
+        }
 
         $.get(dataToLoad, function (data) {
 
@@ -10,16 +17,16 @@ function loadCharts(level, displayType, measureType) {
                 try {
                     switch (measureType) {
                         case "chart":
-                            doLoadCharts(level, displayType, data);
+                            doLoadCharts(level, drill, displayType, data);
                             break;
 
                         case "table":
-                            doLoadTables(level, displayType, data);
+                            doLoadTables(level, drill, displayType, data);
                             break;
 
                         default:
-                            doLoadCharts(level, displayType, data);
-                            doLoadTables(level, displayType, data);
+                            doLoadCharts(level, drill, displayType, data);
+                            doLoadTables(level, drill, displayType, data);
                     }
 
                     console.log(dataToLoad + " Loaded");
@@ -42,7 +49,7 @@ function loadCharts(level, displayType, measureType) {
     });
 }
 
-function doLoadCharts(level, displayType, data) {
+function doLoadCharts(level, drill, displayType, data) {
     return new Promise(resolve => {
         let title = data.chartData[0].chartTitle;
         let labels = data.chartData.map(a => a.title);
@@ -59,6 +66,17 @@ function doLoadCharts(level, displayType, data) {
             chartName = "OutcomesProgressChartPopup";
             $("#PopupLoading").hide();
             $("#OutcomesProgressChartPopupContainer").removeClass("d-none");
+        }
+
+        //Resize chart height depending on number of items
+        if (displayType === "popup") {
+            let numItems = data.chartData.length;
+            let requiredHeight = numItems * 20;
+            if (requiredHeight < chartMinHeight) {
+                requiredHeight = chartMinHeight;
+            }
+
+            $("#OutcomesProgressChartPopup").height(requiredHeight);
         }
 
         //let dataset = "";
@@ -120,7 +138,8 @@ function doLoadCharts(level, displayType, data) {
         };
 
         var options = {
-            maintainAspectRatio: true, //Do not set to true if hiding element
+            responsive: true,
+            maintainAspectRatio: false, //Do not set to true if hiding element
             scales: {
                 xAxes: [{
                     ticks: {
@@ -172,9 +191,12 @@ function doLoadCharts(level, displayType, data) {
                 //console.log(itemID);
                 //console.log(xValue);
                 //console.log(yValue);
-
-                chartElementClicked(level, xValue, yValue);
-
+                if (level >= 4) {
+                    chartElementClickedToTable(level, xValue, yValue);
+                }
+                else {
+                    chartElementClicked(level, xValue, yValue);
+                }
             }
         };
 
@@ -188,34 +210,52 @@ function doLoadCharts(level, displayType, data) {
     });
 }
 
-function doLoadTables(level, displayType, data) {
+function doLoadTables(level, drill, displayType, data) {
     return new Promise(resolve => {
         let drillLevel = data.chartData[0].level;
         let numOutstandingRecords = 0;
         let numCols = 6;
+        let openModal = ``;
+        let popupTable = ``;
+
+        if (displayType !== "popup") {
+            openModal = `
+                 data-toggle="modal" data-target="#ChartModal"`;
+        }
+        else {
+            popupTable = ` PopupTable`;
+        }
 
         let drillColumns = `
-                <th scope="col" class="text-left">Academic Year</th>`;
+            <th scope="col" class="text-left">Academic Year</th>`;
 
-        if (drillLevel > 1) {
+        let buttonColumns = ``;
+
+        if (drillLevel === 2) {
             numCols += 2;
             drillColumns += `
                 <th scope="col" class="text-left">Faculty Code</th>
                 <th scope="col" class="text-left">Faculty Name</th>`;
         }
-
-        if (drillLevel > 2) {
-            numCols += 2;
+        else if (drillLevel === 3) {
+            numCols += 4;
             drillColumns += `
+                <th scope="col" class="text-left">Faculty Code</th>
+                <th scope="col" class="text-left">Faculty Name</th>
                 <th scope="col" class="text-left">Team Code</th>
                 <th scope="col" class="text-left">Team Name</th>`;
         }
-
-        if (drillLevel > 3) {
-            numCols += 2;
+        else if (drillLevel === 4) {
+            numCols += 6;
             drillColumns += `
+                <th scope="col" class="text-left">Fac Code</th>
+                <th scope="col" class="text-left">Team Code</th>              
                 <th scope="col" class="text-left">Course Code</th>
-                <th scope="col" class="text-left">Course Name</th>`;
+                <th scope="col" class="text-left">Course Name</th>
+                <th scope="col" class="text-left">Grp</th>`;
+
+            buttonColumns += `
+                <th scope="col">&nbsp;</th>`;
         }
 
         let tableData =
@@ -239,24 +279,36 @@ function doLoadTables(level, displayType, data) {
             numOutstandingRecords += area.number;
 
             let drillRows = `
-                <td class="text-left DrillTable" data-toggle="modal" data-target="#ChartModal" aria-label="${area.academicYear}" aria-describedby="1"><a href="#">${area.academicYear}</a></td>`;
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="" aria-describedby="2"><a href="#">${area.academicYear}</a></td>`;
 
-            if (drillLevel > 1) {
+            let buttonRows = ``;
+
+            if (drillLevel === 2) {
                 drillRows += `
-                <td class="text-left DrillTable" data-toggle="modal" data-target="#ChartModal" aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facCode}</a></td>
-                <td class="text-left DrillTable" data-toggle="modal" data-target="#ChartModal" aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facName}</a></td>`;
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facName}</a></td>`;
             }
-
-            if (drillLevel > 2) {
+            else if (drillLevel === 3) {
                 drillRows += `
-                <td class="text-left DrillTable" data-toggle="modal" data-target="#ChartModal" aria-label="${area.teamCode}" aria-describedby="4"><a href="#">${area.teamCode}</a></td>
-                <td class="text-left DrillTable" data-toggle="modal" data-target="#ChartModal" aria-label="${area.teamName}" aria-describedby="4"><a href="#">${area.teamName}</a></td>`;
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facName}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.teamCode}" aria-describedby="4"><a href="#">${area.teamCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.teamCode}" aria-describedby="4"><a href="#">${area.teamName}</a></td>`;
             }
-
-            if (drillLevel > 3) {
+            else if (drillLevel === 4) {
                 drillRows += `
-                 <td class="text-left DrillTable" data-toggle="modal" data-target="#ChartModal" aria-label="${area.courseCode}" aria-describedby="5"><a href="#">${area.courseCode}</a></td>
-                <td class="text-left DrillTable" data-toggle="modal" data-target="#ChartModal" aria-label="${area.courseTitle}" aria-describedby="5"><a href="#">${area.courseTitle}</a></td>`;
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.teamCode}" aria-describedby="4"><a href="#">${area.teamCode}</a></td>
+                <td class="text-left">${area.courseCode}</td>
+                <td class="text-left">${area.courseTitle}</td>
+                <td class="text-left">${area.groupCode}</td>`;
+
+                buttonRows += `
+                <td>
+                    <button type="button" class="btn btn-primary btn-sm ProgressLearnersButton CloseChart" data-id="${area.courseID}" aria-label="Progression from '${area.courseTitle}' to Another Course" data-target="${area.groupID}" aria-describedby="${area.facCode}" data-parent="${area.teamCode}" aria-labelledby="${area.academicYear}">
+                        <i class="fas fa-users"></i> View Learners...
+                    </button>
+                </td>`;
             }
 
             tableData += `
@@ -265,6 +317,7 @@ function doLoadTables(level, displayType, data) {
                         <td class="text-right">${area.number}</td>
                         <td class="text-right">${area.total}</td>
                         <td class="text-right">${ +(area.value * 100).toFixed(1) }&percnt;</td>
+                        ${buttonRows}
                     </tr>`;
         }
 
@@ -283,24 +336,26 @@ function doLoadTables(level, displayType, data) {
             $("#OutcomesProgressTablePopupContainer").html(tableData);
         }
 
-        $('.CountUp').each(function () {
-            var $this = $(this),
-                countTo = numOutstandingRecords;
-            $({ countNum: $this.text() }).animate({
-                countNum: countTo
-            },
-                {
-                    duration: 2000,
-                    easing: 'linear',
-                    step: function () {
-                        $this.text(Math.floor(this.countNum));
-                    },
-                    complete: function () {
-                        $this.text(this.countNum);
-                        //alert('finished');
-                    }
-                });
-        });
+        if (displayType === "screen") {
+            $('.CountUp').each(function () {
+                var $this = $(this),
+                    countTo = numOutstandingRecords;
+                $({ countNum: $this.text() }).animate({
+                    countNum: countTo
+                },
+                    {
+                        duration: 2000,
+                        easing: 'linear',
+                        step: function () {
+                            $this.text(Math.floor(this.countNum));
+                        },
+                        complete: function () {
+                            $this.text(this.countNum);
+                            //alert('finished');
+                        }
+                    });
+            });
+        }
 
         //$("#NumOutstandingRecords").html(numOutstandingRecords.toLocaleString());
         
@@ -309,6 +364,12 @@ function doLoadTables(level, displayType, data) {
 }
 
 function chartLoaded() {
+    listLoadedCourseFromFunctions();
+
+    $(".CloseChart").click(function (event) {
+        $('#ChartModal').modal("hide");
+    });
+
     $(".DrillTable").click(function (event) {
         var areaCode = $(this).attr("aria-label");
         var areaLevel = $(this).attr("aria-describedby");
@@ -316,15 +377,68 @@ function chartLoaded() {
         $("#AreaLevel").val(areaLevel);
         $("#MeasureType").val("table");
     });
+
+    $(".PopupTable").click(function (event) {
+        var areaCode = $(this).attr("aria-label");
+        var areaLevel = $(this).attr("aria-describedby");
+
+        $("#OutcomesProgressTablePopupContainer").addClass("d-none");
+        $("#PopupLoading").show();
+
+        loadCharts(areaLevel, areaCode, "popup", "table");
+    });
 }
 
 function chartElementClicked(level, xValue, yValue) {
-    level += 1;
-    let areaCode = xValue.substring(0, xValue.indexOf("-") - 1);
+    let chartIsPopup = $("#ChartIsPopup").val();
+    level = parseInt(level) + 1;
+
+    let dividerLength = chartValueDivider.length;
+    let finalDivider = xValue.lastIndexOf(chartValueDivider);
+    let previousDivider = xValue.substring(0, finalDivider).lastIndexOf(chartValueDivider);
+
+    if (previousDivider === -1) {
+        //If only has one divider then is top-level entity so make this start of value
+        previousDivider = 0;
+        dividerLength = 0;
+    }
+
+    let areaCode = xValue.substring(previousDivider + dividerLength, finalDivider);
+    
+    $("#AreaCode").val(areaCode);
+    $("#AreaLevel").val(level);
+    $("#MeasureType").val("chart");
+
+    if (chartIsPopup === "Y") {
+        $("#OutcomesProgressChartPopupContainer").addClass("d-none");
+        $("#PopupLoading").show();
+        loadCharts(level, areaCode, "popup", "chart");
+    }
+    else {
+        $('#ChartModal').modal();
+    }
+}
+
+function chartElementClickedToTable(level, xValue, yValue) {
+    level = 4;
+
+    let dividerLength = chartValueDivider.length;
+    let firstDivider = xValue.indexOf(chartValueDivider);
+    let secondDivider = xValue.substring(firstDivider + dividerLength, xValue.length - firstDivider - dividerLength).indexOf(chartValueDivider);
+
+    if (secondDivider === -1) {
+        //If only has one divider then is top-level entity so make this start of value
+        secondDivider = xValue.length();
+        dividerLength = 0;
+    }
+
+    let areaCode = xValue.substring(firstDivider + dividerLength, firstDivider + dividerLength + secondDivider);
 
     $("#AreaCode").val(areaCode);
     $("#AreaLevel").val(level);
     $("#MeasureType").val("chart");
 
-    $('#ChartModal').modal();
+    $("#OutcomesProgressChartPopupContainer").addClass("d-none");
+    $("#PopupLoading").show();
+    loadCharts(level, areaCode, "popup", "table");
 }

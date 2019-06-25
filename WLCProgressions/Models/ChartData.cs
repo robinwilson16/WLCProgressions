@@ -38,10 +38,20 @@ namespace WLCProgressions.Models
         [StringLength(150)]
         public string TeamName { get; set; }
 
+        public int? CourseID { get; set; }
+
         [StringLength(24)]
         public string CourseCode { get; set; }
 
         [StringLength(255)]
         public string CourseTitle { get; set; }
+
+        public int? GroupID { get; set; }
+
+        [StringLength(3)]
+        public string GroupCode { get; set; }
+
+        [StringLength(50)]
+        public string GroupName { get; set; }
     }
 }
