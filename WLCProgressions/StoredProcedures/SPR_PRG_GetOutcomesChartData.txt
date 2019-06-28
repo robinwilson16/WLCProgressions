@@ -162,7 +162,7 @@ BEGIN
 		BEGIN
 			SET @DrillToArea =
 			N'
-			AND FAC.Code = @Drill';
+			AND COALESCE ( FAC.Code, ''00'' ) = @Drill';
 		END
 	END
 	ELSE IF( COALESCE ( @Level, 1 ) = 4)
@@ -198,7 +198,7 @@ BEGIN
 		BEGIN
 			SET @DrillToArea =
 			N'
-			AND TEAM.Code = @Drill';
+			AND COALESCE ( TEAM.Code, ''00'' ) = @Drill';
 		END
 	END
 
