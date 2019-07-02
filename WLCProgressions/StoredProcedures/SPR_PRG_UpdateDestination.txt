@@ -233,7 +233,8 @@ BEGIN
                                 ReturnYearID,
                                 IsActualDestination,
                                 CreatedBy,
-                                CreatedDate
+                                CreatedDate,
+								UserDefined1
                             )
                             SELECT
                                 LocalDestinationID = @Destination,
@@ -242,9 +243,10 @@ BEGIN
                                 IncludeInILR = 1,
                                 StudentID = SD.StudentID,
                                 ReturnYearID = @AcademicYear,
-                                IsActualDestination = 1,
+                                IsActualDestination = 0,
                                 CreatedBy = @Username,
-                                CreatedDate = GETDATE()
+                                CreatedDate = GETDATE(),
+								UserDefined1 = ''P&Dscreen''
                             FROM ' + @System + '.dbo.StudentDetail SD
                             WHERE
                                 SD.RefNo = @StudentRef

@@ -415,20 +415,13 @@ $(".SaveDestinationButton").click(function (event) {
 });
 
 $("#ChartModal").on("shown.bs.modal", function () {
-    let areaCode = $("#AreaCode").val();
-    let areaLevel = $("#AreaLevel").val();
-    let measureType = $("#MeasureType").val();
-
     $("#ChartIsPopup").val("Y");
 
-    loadCharts(areaLevel, areaCode, "popup", measureType);
+    getChartData("popup");
 });
 
 $("#ChartModal").on("hidden.bs.modal", function (e) {   
-    $("#OutcomesProgressChartPopupContainer").addClass("d-none");
-    $("#OutcomesProgressTablePopupContainer").addClass("d-none");
-
+    showHideCharts("hide", "both", "popup");
     $("#ChartIsPopup").val("N");
-
-    $("#PopupLoading").show();
+    $("#AreaLevel").val(chartDefaultLevel);
 });

@@ -30,7 +30,6 @@
         </div>
     </div>
 }
-
 <div class="container">
     <div class="row">
         <div class="col-md">
@@ -69,8 +68,18 @@
                 <ul class="nav w-25 nav-pills nav-fill ml-auto justify-content-end d-lg-inline-flex">
                     <li class="nav-item">
                         <div class="card">
-                                <h4 id="NumOutstandingRecords" class="CountUp">0</h4> records to go
+                            <h4 id="NumOutstandingRecords" class="CountUp">0</h4> <span id="NumOutstandingRecordsText">records to go</span>
                         </div>
+                    </li>
+                </ul>
+                <ul class="nav w-100 nav-pills nav-fill ml-auto justify-content-end d-lg-inline-flex">
+                    <li class="nav-item align-self-center">
+                        Outstanding Records
+                        <label class="switch-sm">
+                            <input type="checkbox" class="ToggleOutstandingChart">
+                            <span class="slider-sm round"></span>
+                        </label>
+                        Completed Records
                     </li>
                 </ul>
                 <ul class="nav w-100 nav-tabs" id="myTab" role="tablist">

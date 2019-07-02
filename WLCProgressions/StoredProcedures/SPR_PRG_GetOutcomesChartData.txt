@@ -23,10 +23,7 @@ BEGIN
     DECLARE @SQLString NVARCHAR(MAX);
     DECLARE @SQLParams NVARCHAR(MAX);
 
-	--Temporary
-	SET @Measure = 'Outstanding'
-
-	IF(@Measure = 'Outstanding')
+	IF(COALESCE ( @Measure, 'OUTSTANDING' ) = 'OUTSTANDING')
 	BEGIN
 		SET @SQLChartTitle = 
 			N'

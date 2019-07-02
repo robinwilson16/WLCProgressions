@@ -1,35 +1,225 @@
-﻿var chartValueDivider = " - ";
-var chartMinHeight = 450;
+﻿//Format numbers to add commas
+var numFormatted = new Intl.NumberFormat('en-GB', {
+    style: 'decimal'
+});
 
-loadCharts(2, null, "screen", "both");
-function loadCharts(level, drill, displayType, measureType) {
+
+const chartValueDivider = " - ";
+const chartMinHeight = 450;
+const chartDefaultLevel = 2;
+const chartDefaultMeasureMethod = 'OUTSTANDING';
+$("#AreaLevel").val(chartDefaultLevel);
+
+//Canvas must be visible initially to be able to load chart
+showHideCharts("show", "chart", "screen");
+showHideCharts("show", "chart", "popup");
+
+//Define charts
+var pageChartCanvas = document.getElementById("OutcomesProgressChart").getContext('2d');
+var popupChartCanvas = document.getElementById("OutcomesProgressChartPopup").getContext('2d');
+
+var chartData1 = {
+    datasets: [{
+        label: "Outstanding Progressions",
+        borderWidth: 1
+    },
+    {
+        label: "Target 0%",
+        backgroundColor: [
+            'rgba(255,0,0,1)'
+        ],
+        borderColor: [
+            'rgba(255,0,0,1)'
+        ],
+        type: 'line',
+        borderWidth: 1
+    }]
+};
+
+var chartData2 = {
+    datasets: [{
+        label: "Outstanding Progressions",
+        borderWidth: 1
+    },
+    {
+        label: "Target 0%",
+        backgroundColor: [
+            'transparent'
+        ],
+        borderColor: [
+            'rgba(255,0,0,1)'
+        ],
+        type: 'line',
+        borderWidth: 1
+    }]
+};
+
+var options = {
+    responsive: true,
+    maintainAspectRatio: false, //Do not set to true if hiding element
+    xAxisID: chartDefaultLevel,
+    scales: {
+        xAxes: [{
+            ticks: {
+                min: 0,
+                max: 1,
+                beginAtZero: true,
+                interval: 1,
+                callback: function (value) {
+                    return (value / this.max * 100).toFixed(0) + '%'; // convert it to percentage
+                }
+            },
+            gridLines: {
+                display: true,
+                color: "rgba(255,99,164,0.2)"
+            }
+        }],
+        yAxes: [{
+            ticks: {
+                min: 0,
+                beginAtZero: true,
+                autoSkip: false
+            },
+            gridLines: {
+                display: false
+            }
+        }]
+    },
+    tooltips: {
+        mode: 'label',
+        label: 'mylabel',
+        callbacks: {
+            label: function (tooltipItem, data) {
+                return (tooltipItem.xLabel * 100).toFixed(1) + '%'; // convert it to percentage
+            }
+        }
+    },
+    plugins: { //See https://nagix.github.io/chartjs-plugin-colorschemes/
+        colorschemes: {
+            scheme: 'tableau.Summer8'
+        }
+    },
+    events: ['click'],
+    onClick: function (c, i) {
+        let e = i[0];
+        if (typeof e !== "undefined") {
+            //Ensure user did not click outside bar
+            //level = this.options.xAxisID + 1;
+            level = parseInt($("#AreaLevel").val());
+            level += 1;
+
+            let itemID = e._index;
+            let xValue = this.data.labels[itemID];
+            let yValue = this.data.datasets[0].data[itemID];
+
+            if (level > 4) {
+                level = 4;
+                chartElementClickedToTable(level, xValue, yValue);
+            }
+            else {
+                chartElementClicked(level, xValue, yValue);
+            }
+        }
+    }
+};
+
+var pageChart = new Chart(pageChartCanvas, {
+    options: options,
+    data: chartData1,
+    type: 'horizontalBar'
+});
+
+var popupChart = new Chart(popupChartCanvas, {
+    options: options,
+    data: chartData2,
+    type: 'horizontalBar'
+});
+
+$(".ToggleOutstandingChart").click(function (event) {
+    let isChecked = $(this).is(":checked");
+    let measureMethod = null;
+
+    if (isChecked === true) {
+        measureMethod = 'REMAINING';
+    }
+    else {
+        measureMethod = 'OUTSTANDING';
+    }
+
+    $("#MeasureMethod").val(measureMethod);
+    getChartData("screen");
+});
+
+//Load chart data
+$("#AreaLevel").val(chartDefaultLevel);
+getChartData("screen");
+
+function getChartData(displayType) {
     return new Promise(resolve => {
+        let level = $("#AreaLevel").val();
+        let drill = $("#AreaCode").val();
+        let measureType = $("#MeasureType").val();
+        let measureMethod = $("#MeasureMethod").val();
+
+        //Defaults
+        if (level < 1) {
+            level = chartDefaultLevel;
+        }
+
+        if (measureMethod === "") {
+            measureMethod = chartDefaultMeasureMethod;
+        }
+
+        if (displayType === "") {
+            displayType = "popup";
+        }
+
         let dataToLoad = `/Charts/?handler=Json&level=${level}`;
 
-        if (drill !== null) {
+        if (measureMethod !== "") {
+            dataToLoad += `&measure=${measureMethod}`;
+        }
+
+        if (drill !== "") {
             dataToLoad += `&drill=${drill}`;
         }
 
+        let chartToRefresh = null;
+
+        if (displayType === "screen") {
+            chartToRefresh = pageChart;
+        }
+        else {
+            chartToRefresh = popupChart;
+        }
+
+        showHideCharts("hide", "both", displayType);
         $.get(dataToLoad, function (data) {
 
         })
             .then(data => {
+                console.log(dataToLoad + " Loaded");
+                showHideCharts("show", measureType, displayType);
+
                 try {
+                    buildBreadcrumb(data);
+
                     switch (measureType) {
                         case "chart":
-                            doLoadCharts(level, drill, displayType, data);
+                            populateChart(chartToRefresh, data);
+                            resizeChart(displayType, data);
                             break;
 
                         case "table":
-                            doLoadTables(level, drill, displayType, data);
+                            doLoadTables(level, drill, displayType, measureMethod, data);
                             break;
 
                         default:
-                            doLoadCharts(level, drill, displayType, data);
-                            doLoadTables(level, drill, displayType, data);
+                            populateChart(chartToRefresh, data);
+                            resizeChart(displayType, data);
+                            doLoadTables(level, drill, displayType, measureMethod, data);
                     }
 
-                    console.log(dataToLoad + " Loaded");
                     resolve(1);
                 }
                 catch (e) {
@@ -49,25 +239,27 @@ function loadCharts(level, drill, displayType, measureType) {
     });
 }
 
-function doLoadCharts(level, drill, displayType, data) {
+function populateChart(chart, data) {
+    let title = data.chartData[0].chartTitle;
+    let level = data.chartData[0].level;
+    let labels = data.chartData.map(a => a.title);
+    let values = data.chartData.map(a => a.value);
+
+    let colours = palette('qualitative', data.chartData.length, 0);
+
+    //Update chart
+    chart.data.labels = labels;
+    chart.data.datasets[0].label = title;
+    chart.data.datasets[0].data = values;
+    chart.data.datasets[0].backgroundColor = colours.map(function (hex) {
+        return '#' + hex;
+    });
+    chart.options.xAxisID = level;
+    chart.update();
+}
+
+function resizeChart(displayType, data) {
     return new Promise(resolve => {
-        let title = data.chartData[0].chartTitle;
-        let labels = data.chartData.map(a => a.title);
-        let values = data.chartData.map(a => a.value);
-
-        var chartName = null;
-
-        if (displayType === "screen") {
-            chartName = "OutcomesProgressChart";
-            $("#ChartLoading").hide();
-            $("#OutcomesProgressChartContainer").removeClass("d-none");
-        }
-        else {
-            chartName = "OutcomesProgressChartPopup";
-            $("#PopupLoading").hide();
-            $("#OutcomesProgressChartPopupContainer").removeClass("d-none");
-        }
-
         //Resize chart height depending on number of items
         if (displayType === "popup") {
             let numItems = data.chartData.length;
@@ -79,138 +271,121 @@ function doLoadCharts(level, drill, displayType, data) {
             $("#OutcomesProgressChartPopup").height(requiredHeight);
         }
 
-        //let dataset = "";
-        //for (let bar of data.chartData) {
-        //    dataset +=
-        //        `{
-        //            label: "${bar.title}",
-        //            borderWidth: 1,
-        //            data: ${bar.value}
-        //        },`;
-        //}
-
-        //let datasets = [dataset];
-        let colours = palette('qualitative', data.chartData.length, 0);
-
-        var ctx = document.getElementById(chartName).getContext('2d');
-        var chartData = {
-            labels: labels,
-            datasets: [{
-                label: title,
-                backgroundColor: colours.map(function (hex) {
-                    return '#' + hex;
-                }),
-                //backgroundColor: [
-                //    'rgba(255, 99, 132, 0.2)',
-                //    'rgba(54, 162, 235, 0.2)',
-                //    'rgba(255, 206, 86, 0.2)',
-                //    'rgba(75, 192, 192, 0.2)',
-                //    'rgba(153, 102, 255, 0.2)',
-                //    'rgba(255, 159, 64, 0.2)',
-                //    'rgba(255, 99, 132, 0.2)',
-                //    'rgba(54, 162, 235, 0.2)'
-                //],
-                //borderColor: [
-                //    'rgba(255,99,132,1)',
-                //    'rgba(54, 162, 235, 1)',
-                //    'rgba(255, 206, 86, 1)',
-                //    'rgba(75, 192, 192, 1)',
-                //    'rgba(153, 102, 255, 1)',
-                //    'rgba(255, 159, 64, 1)',
-                //    'rgba(255,99,132,1)',
-                //    'rgba(54, 162, 235, 1)'
-                //],
-                borderWidth: 1,
-                data: values
-            },
-            {
-                label: "Target 0%",
-                backgroundColor: [
-                    'transparent'
-                ],
-                borderColor: [
-                    'rgba(255,0,0,1)'
-                ],
-                type: 'line',
-                borderWidth: 1,
-                data: [0, 0, 0, 0, 0, 0]
-            }]
-        };
-
-        var options = {
-            responsive: true,
-            maintainAspectRatio: false, //Do not set to true if hiding element
-            scales: {
-                xAxes: [{
-                    ticks: {
-                        min: 0,
-                        max: 1,
-                        beginAtZero: true,
-                        interval: 1,
-                        callback: function (value) {
-                            return (value / this.max * 100).toFixed(0) + '%'; // convert it to percentage
-                        },
-                    },
-                    gridLines: {
-                        display: true,
-                        color: "rgba(255,99,164,0.2)"
-                    }
-                }],
-                yAxes: [{
-                    ticks: {
-                        min: 0,
-                        beginAtZero: true,
-                        autoSkip: false
-                    },
-                    gridLines: {
-                        display: false
-                    }
-                }]
-            },
-            tooltips: {
-                mode: 'label',
-                label: 'mylabel',
-                callbacks: {
-                    label: function (tooltipItem, data) {
-                        return (tooltipItem.xLabel * 100).toFixed(1) + '%'; // convert it to percentage
-                    }
-                }
-            },
-            plugins: { //See https://nagix.github.io/chartjs-plugin-colorschemes/
-                colorschemes: {
-                    scheme: 'tableau.Summer8'
-                }
-            },
-            events: ['click'],
-            onClick: function (c, i) {
-                let e = i[0];
-                let itemID = e._index; 
-                let xValue = this.data.labels[itemID];
-                let yValue = this.data.datasets[0].data[itemID];
-
-                //console.log(itemID);
-                //console.log(xValue);
-                //console.log(yValue);
-                if (level >= 4) {
-                    chartElementClickedToTable(level, xValue, yValue);
-                }
-                else {
-                    chartElementClicked(level, xValue, yValue);
-                }
-            }
-        };
-
-        var myChart = new Chart(ctx, {
-            options: options,
-            data: chartData,
-            type: 'horizontalBar'
-        });
-
         resolve(1);
     });
 }
 
-function doLoadTables(level, drill, displayType, data) {
+function buildBreadcrumb(data) {
+    let level = data.chartData[0].level;
+    let level1Code = data.chartData[0].academicYear;
+    let level2Code = data.chartData[0].facCode;
+    let level3Code = data.chartData[0].teamCode;
+    let level4Code = data.chartData[0].courseCode;
+
+    let bCrumb = ``;
+
+    if (level >= 2 && level1Code !== null) {
+        bCrumb += `
+            <a href="#" class="BreadCrumb" aria-level="1">${level1Code}</a>`;
+    }
+
+    if (level >= 3 && level2Code !== null) {
+        bCrumb += `
+             <i class="fas fa-chevron-right"></i> <a href="#" class="BreadCrumb" aria-level="2">${level2Code}</a>`;
+    }
+
+    if (level >= 4 && level3Code !== null) {
+        bCrumb += `
+             <i class="fas fa-chevron-right"></i> <a href="#" class="BreadCrumb" aria-level="3">${level3Code}</a>`;
+    }
+
+    if (level >= 5 && level4Code !== null) {
+        bCrumb += `
+             <i class="fas fa-chevron-right"></i> <a href="#" class="BreadCrumb" aria-level="4">${level4Code}</a>`;
+    }
+
+    $("#BreadcrumbBar").html(bCrumb);
+
+    $(".BreadCrumb").click(function (event) {
+        let level = $(this).attr("aria-level");
+        $("#AreaLevel").val(level);
+        getChartData("popup");
+    });
+}
+
+function showHideCharts(showHide, measureType, displayType) {
+    if (showHide === "") {
+        showHide = "show";
+    }
+
+    switch (showHide) {
+        case "show":
+            if (displayType === "screen") {
+                if (measureType === "chart") {
+                    $("#ChartLoading").hide();
+                    $("#OutcomesProgressChartContainer").removeClass("d-none");
+                }
+                else if (measureType === "table") {
+                    $("#TableLoading").hide();
+                    $("#OutcomesProgressTableContainer").removeClass("d-none");
+                }
+                else {
+                    $("#ChartLoading").hide();
+                    $("#TableLoading").hide();
+                    $("#OutcomesProgressChartContainer").removeClass("d-none");
+                    $("#OutcomesProgressTableContainer").removeClass("d-none");
+                }
+            }
+            else {
+                $("#PopupLoading").hide();
+                if (measureType === "chart") {
+                    $("#OutcomesProgressChartPopupContainer").removeClass("d-none");
+                }
+                else if (measureType === "table") {
+                    $("#OutcomesProgressTablePopupContainer").removeClass("d-none");
+                }
+                else {
+                    $("#OutcomesProgressChartPopupContainer").removeClass("d-none");
+                    $("#OutcomesProgressTablePopupContainer").removeClass("d-none");
+                }
+            }
+            break;
+
+        case "hide":
+            if (displayType === "screen") {
+                if (measureType === "chart") {
+                    $("#ChartLoading").show();
+                    $("#OutcomesProgressChartContainer").addClass("d-none");
+                }
+                else if (measureType === "table") {
+                    $("#TableLoading").show();
+                    $("#OutcomesProgressTableContainer").addClass("d-none");
+                }
+                else {
+                    $("#ChartLoading").show();
+                    $("#TableLoading").show();
+                    $("#OutcomesProgressChartContainer").addClass("d-none");
+                    $("#OutcomesProgressTableContainer").addClass("d-none");
+                }
+            }
+            else {
+                $("#PopupLoading").show();
+                if (measureType === "chart") {
+                    $("#OutcomesProgressChartPopupContainer").addClass("d-none");
+                }
+                else if (measureType === "table") {
+                    $("#OutcomesProgressTablePopupContainer").addClass("d-none");
+                }
+                else {
+                    $("#OutcomesProgressChartPopupContainer").addClass("d-none");
+                    $("#OutcomesProgressTablePopupContainer").addClass("d-none");
+                }
+            }
+            break;
+    }
+}
+
+function doLoadTables(level, drill, displayType, measureMethod, data) {
     return new Promise(resolve => {
         let drillLevel = data.chartData[0].level;
         let numOutstandingRecords = 0;
@@ -224,6 +399,15 @@ function doLoadTables(level, drill, displayType, data) {
         }
         else {
             popupTable = ` PopupTable`;
+        }
+
+        let measureColTitle = null;
+
+        if (measureMethod === "OUTSTANDING" || measureMethod === "") {
+            measureColTitle = "Remaining";
+        }
+        else {
+            measureColTitle = "Completed";
         }
 
         let drillColumns = `
@@ -269,9 +453,9 @@ function doLoadTables(level, drill, displayType, data) {
                 <tbody>
                     <tr>
                         ${drillColumns}
-                        <th scope="col" class="text-right">Remaining</th>
+                        <th scope="col" class="text-right">${measureColTitle}</th>
                         <th scope="col" class="text-right">Out Of</th>
-                        <th scope="col" class="text-right">Value</th>
+                        <th scope="col" class="text-right">Percent</th>
 
                     </tr>`;
 
@@ -314,8 +498,8 @@ function doLoadTables(level, drill, displayType, data) {
             tableData += `
                     <tr>
                         ${drillRows}
-                        <td class="text-right">${area.number}</td>
-                        <td class="text-right">${area.total}</td>
+                        <td class="text-right">${numFormatted.format(area.number)}</td>
+                        <td class="text-right">${numFormatted.format(area.total)}</td>
                         <td class="text-right">${ +(area.value * 100).toFixed(1) }&percnt;</td>
                         ${buttonRows}
                     </tr>`;
@@ -326,17 +510,24 @@ function doLoadTables(level, drill, displayType, data) {
             </table>`;
 
         if (displayType === "screen") {
-            $("#TableLoading").hide();
-            $("#OutcomesProgressTableContainer").removeClass("d-none");
             $("#OutcomesProgressTableContainer").html(tableData);
         }
         else {
-            $("#PopupLoading").hide();
-            $("#OutcomesProgressTablePopupContainer").removeClass("d-none");
             $("#OutcomesProgressTablePopupContainer").html(tableData);
         }
 
         if (displayType === "screen") {
+            let numOutstandingRecordsText = null;
+
+            if (measureMethod === "OUTSTANDING" || measureMethod === "") {
+                numOutstandingRecordsText = "records to go";
+            }
+            else {
+                numOutstandingRecordsText = "records so far";
+            }
+
+            $("#NumOutstandingRecordsText").html(numOutstandingRecordsText);
+
             $('.CountUp').each(function () {
                 var $this = $(this),
                     countTo = numOutstandingRecords;
@@ -347,10 +538,10 @@ function doLoadTables(level, drill, displayType, data) {
                         duration: 2000,
                         easing: 'linear',
                         step: function () {
-                            $this.text(Math.floor(this.countNum));
+                            $this.text(numFormatted.format(Math.floor(this.countNum)));
                         },
                         complete: function () {
-                            $this.text(this.countNum);
+                            $this.text(numFormatted.format(this.countNum));
                             //alert('finished');
                         }
                     });
@@ -382,16 +573,14 @@ function chartLoaded() {
         var areaCode = $(this).attr("aria-label");
         var areaLevel = $(this).attr("aria-describedby");
 
-        $("#OutcomesProgressTablePopupContainer").addClass("d-none");
-        $("#PopupLoading").show();
+        showHideCharts("hide", "table", "popup");
 
-        loadCharts(areaLevel, areaCode, "popup", "table");
+        getChartData("popup");
     });
 }
 
 function chartElementClicked(level, xValue, yValue) {
     let chartIsPopup = $("#ChartIsPopup").val();
-    level = parseInt(level) + 1;
 
     let dividerLength = chartValueDivider.length;
     let finalDivider = xValue.lastIndexOf(chartValueDivider);
@@ -410,9 +599,7 @@ function chartElementClicked(level, xValue, yValue) {
     $("#MeasureType").val("chart");
 
     if (chartIsPopup === "Y") {
-        $("#OutcomesProgressChartPopupContainer").addClass("d-none");
-        $("#PopupLoading").show();
-        loadCharts(level, areaCode, "popup", "chart");
+        getChartData("popup");
     }
     else {
         $('#ChartModal').modal();
@@ -420,15 +607,13 @@ function chartElementClicked(level, xValue, yValue) {
 }
 
 function chartElementClickedToTable(level, xValue, yValue) {
-    level = 4;
-
     let dividerLength = chartValueDivider.length;
     let firstDivider = xValue.indexOf(chartValueDivider);
     let secondDivider = xValue.substring(firstDivider + dividerLength, xValue.length - firstDivider - dividerLength).indexOf(chartValueDivider);
 
     if (secondDivider === -1) {
         //If only has one divider then is top-level entity so make this start of value
-        secondDivider = xValue.length();
+        secondDivider = xValue.length;
         dividerLength = 0;
     }
 
@@ -436,9 +621,7 @@ function chartElementClickedToTable(level, xValue, yValue) {
 
     $("#AreaCode").val(areaCode);
     $("#AreaLevel").val(level);
-    $("#MeasureType").val("chart");
+    $("#MeasureType").val("table");
 
-    $("#OutcomesProgressChartPopupContainer").addClass("d-none");
-    $("#PopupLoading").show();
-    loadCharts(level, areaCode, "popup", "table");
+    getChartData("popup");
 }
