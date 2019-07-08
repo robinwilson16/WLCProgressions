@@ -267,6 +267,7 @@ BEGIN
 	WHERE
 		SD.AcademicYearID = @AcademicYear
 		AND ENR.CompletionStatusID IN ( ''1'', ''2'' )
+		AND COALESCE ( ENR.ActualEndDate, ENR.ExpectedEndDate ) BETWEEN ''20'' + LEFT ( @AcademicYear, 2 ) + ''-08-01'' AND ''20'' + RIGHT ( @AcademicYear, 2 ) + ''-07-31''
 		AND ENR.OfferingID = @CourseID
 		AND COALESCE ( ENR.OfferingGroupID, 0 ) = COALESCE ( @GroupID, 0 )
 	ORDER BY

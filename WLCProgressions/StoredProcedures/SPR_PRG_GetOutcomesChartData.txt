@@ -248,6 +248,7 @@ BEGIN
 			WHERE
 				SD.AcademicYearID = @AcademicYear
 				AND ENR.CompletionStatusID IN ( ''1'', ''2'' )
+				AND COALESCE ( ENR.ActualEndDate, ENR.ExpectedEndDate ) BETWEEN ''20'' + LEFT ( @AcademicYear, 2 ) + ''-08-01'' AND ''20'' + RIGHT ( @AcademicYear, 2 ) + ''-07-31''
 			GROUP BY
 				ENR.OfferingID,
 				ENR.OfferingGroupID	
@@ -379,6 +380,7 @@ BEGIN
 			CRS.AcademicYearID = @AcademicYear
 			AND CRS.OfferingStatusID IN ( ''1'', ''3'' ) --Live and pending only
 			AND CLD.SubOfferingID IS NULL --Is a parent (has no parents itself)
+			AND CRS.FranchisingPartnerID IS NULL --Not a partner
 			AND COALESCE ( ENR.Enrolments, 0 ) > 0
 			' + @DrillToArea + '
 		GROUP BY
