@@ -93,6 +93,10 @@ BEGIN
 		) ENR
 			ON ENR.OfferingID = CRS.OfferingID
 			AND COALESCE ( ENR.OfferingGroupID, 0 ) = COALESCE ( GRP.OfferingGroupID, 0 )
+	'
+
+	SET @SQLString += 
+		N'
 		LEFT JOIN (
 			SELECT
 				ENR.OfferingID,
@@ -214,6 +218,10 @@ BEGIN
 		) PRG
 			ON PRG.OfferingID = CRS.OfferingID
 			AND COALESCE ( PRG.OfferingGroupID, 0 ) = COALESCE ( GRP.OfferingGroupID, 0 )
+	'
+
+	SET @SQLString += 
+		N'
 		WHERE
 			CRS.AcademicYearID = @AcademicYear
 			AND CRS.OfferingStatusID IN ( ''1'', ''3'' ) --Live and pending only
