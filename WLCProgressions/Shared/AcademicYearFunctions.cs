@@ -18,9 +18,10 @@ namespace WLCProgressions.Shared
             if (academicYear == null)
             {
                 //Get value from database
-                ConfigData = await _context.Config
-                    .FromSql("EXEC SPR_PRG_Config")
-                    .FirstOrDefaultAsync();
+                ConfigData = (await _context.Config
+                    .FromSqlInterpolated($"EXEC SPR_PRG_Config")
+                    .ToListAsync())
+                    .FirstOrDefault();
 
                 currentAcademicYear = ConfigData.AcademicYear;
             }
@@ -35,9 +36,10 @@ namespace WLCProgressions.Shared
         public static async Task<string> GetDefaultAcademicYear(ApplicationDbContext _context)
         {
                 //Get value from database
-                ConfigData = await _context.Config
-                    .FromSql("EXEC SPR_PRG_Config")
-                    .FirstOrDefaultAsync();
+                ConfigData = (await _context.Config
+                    .FromSqlInterpolated($"EXEC SPR_PRG_Config")
+                    .ToListAsync())
+                    .FirstOrDefault();
 
             return ConfigData.AcademicYear;
         }
@@ -49,9 +51,10 @@ namespace WLCProgressions.Shared
             if (string.IsNullOrEmpty(academicYear) || academicYear.Length < 5)
             {
                 //Get value from database
-                ConfigData = await _context.Config
-                    .FromSql("EXEC SPR_PRG_Config")
-                    .FirstOrDefaultAsync();
+                ConfigData = (await _context.Config
+                    .FromSqlInterpolated($"EXEC SPR_PRG_Config")
+                    .ToListAsync())
+                    .FirstOrDefault();
 
                 progressionAcademicYear = ConfigData.ProgressionYear;
             }

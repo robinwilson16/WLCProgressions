@@ -5,6 +5,19 @@
     ViewData["Title"] = "Home page";
 }
 
+@if (Model.Browser.Contains("Trident"))
+{
+    <div class="container Spacer">
+        <div class="row">
+            <div class="col-md">
+                <div class="alert alert-danger text-center" role="alert">
+                    <i class="fab fa-internet-explorer"></i> You are using Internet Explorer which is outdated and not supported. Please switch to a modern browser such as <a href="https://www.google.com/chrome/" class="alert-link" target="_blank" rel="noopener"><i class="fab fa-chrome"></i> Chrome</a> or <a href="https://www.microsoftedgeinsider.com" class="alert-link" target="_blank" rel="noopener"><i class="fab fa-edge"></i> Edge</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @if (@Model.SystemID != "ProSolution")
 {
     <div class="container Spacer">

@@ -39,41 +39,41 @@ namespace WLCProgressions.Pages
 
         public string SystemVersion { get; set; }
 
+        public string Browser { get; set; }
+
         public async Task OnGetAsync(string system, string systemILP, string academicYear)
         {
             string defaultAcademicYear = await AcademicYearFunctions.GetDefaultAcademicYear(_context);
 
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
             string systemILPDB = DatabaseSelector.GetILPDatabase(_configuration, systemILP, system);
-            var systemParam = new SqlParameter("@System", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
-            var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
             string ProgressionAcademicYear = await AcademicYearFunctions.GetProgressionYear(academicYear, _context);
-            var progressionYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
 
             SystemID = systemDB;
             SystemILPID = systemILPDB;
             AcademicYear = CurrentAcademicYear;
             ProgressionYear = ProgressionAcademicYear;
             DefaultAcademicYear = defaultAcademicYear;
+            string selectListDomain = null;
 
-            var academicYearSelectListParam = new SqlParameter("@Domain", "ACADEMIC_YEAR");
+            selectListDomain = "ACADEMIC_YEAR";
             AcademicYearData = await _context.SelectListData
-                .FromSql("EXEC SPR_PRG_SelectListData @System, @AcademicYear, @Domain", systemParam, academicYearParam, academicYearSelectListParam)
+                .FromSqlInterpolated($"EXEC SPR_PRG_SelectListData @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @Domain={selectListDomain}")
                 .ToListAsync();
 
             ViewData["AcademicYearID"] = new SelectList(AcademicYearData, "Code", "Description", CurrentAcademicYear);
 
-            var applicationOffer = new SqlParameter("@Domain", "APPLICATION_OFFER");
+            selectListDomain = "APPLICATION_OFFER";
             ApplicationOffer = await _context.SelectListData
-                .FromSql("EXEC SPR_PRG_SelectListData @System, @AcademicYear, @Domain", systemParam, academicYearParam, applicationOffer)
+                .FromSqlInterpolated($"EXEC SPR_PRG_SelectListData @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @Domain={selectListDomain}")
                 .ToListAsync();
 
             ViewData["OfferID"] = new SelectList(ApplicationOffer, "Code", "Description");
 
-            var applicationCondition = new SqlParameter("@Domain", "APPLICATION_CONDITION");
+            selectListDomain = "APPLICATION_CONDITION";
             ApplicationCondition = await _context.SelectListData
-                .FromSql("EXEC SPR_PRG_SelectListData @System, @AcademicYear, @Domain", systemParam, academicYearParam, applicationCondition)
+                 .FromSqlInterpolated($"EXEC SPR_PRG_SelectListData @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @Domain={selectListDomain}")
                 .ToListAsync();
 
             ViewData["ConditionID"] = new SelectList(ApplicationCondition, "Code", "Description");
@@ -83,6 +83,8 @@ namespace WLCProgressions.Pages
             UserGreeting = Identity.GetGreeting();
 
             SystemVersion = _configuration["Version"];
+
+            Browser = Request.Headers["User-Agent"];
         }
     }
 }

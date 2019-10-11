@@ -156,6 +156,7 @@ getChartData("screen");
 
 function getChartData(displayType) {
     return new Promise(resolve => {
+        let academicYear = $("#AcademicYearID").val();
         let level = $("#AreaLevel").val();
         let drill = $("#AreaCode").val();
         let measureType = $("#MeasureType").val();
@@ -174,7 +175,7 @@ function getChartData(displayType) {
             displayType = "popup";
         }
 
-        let dataToLoad = `/Charts/?handler=Json&level=${level}`;
+        let dataToLoad = `/Charts/?handler=Json&academicYear=${academicYear}&level=${level}`;
 
         if (measureMethod !== "") {
             dataToLoad += `&measure=${measureMethod}`;

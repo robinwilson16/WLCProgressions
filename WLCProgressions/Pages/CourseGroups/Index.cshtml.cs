@@ -25,7 +25,7 @@ namespace WLCProgressions.Pages.CourseGroups
 
         public IList<CourseGroup> CourseGroup { get;set; }
 
-        public async Task OnGetAsync(string system, string academicYear, bool hasEnrols, bool showOutstanding, string search)
+        public async Task OnGetAsync(string system, string academicYear, bool requireEnrols, bool showOutstanding, string search)
         {
             if (String.IsNullOrEmpty(search))
             {
@@ -34,19 +34,14 @@ namespace WLCProgressions.Pages.CourseGroups
 
             //CourseGroup = await _context.CourseGroup.ToListAsync();
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
-            var systemParam = new SqlParameter("@System", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
-            var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
-            var hasEnrolsParam = new SqlParameter("@HasEnrols", hasEnrols);
-            var showOutstandingParam = new SqlParameter("@ShowOutstanding", showOutstanding);
-            var searchParam = new SqlParameter("@CourseSearch", search);
 
             CourseGroup = await _context.CourseGroup
-                .FromSql("EXEC SPR_PRG_GetCourseGroupList @System, @AcademicYear, @HasEnrols, @ShowOutstanding, @CourseSearch", systemParam, academicYearParam, hasEnrolsParam, showOutstandingParam, searchParam)
+                .FromSqlInterpolated($"EXEC SPR_PRG_GetCourseGroupList @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @RequireEnrols={requireEnrols}, @ShowOutstanding={showOutstanding}, @CourseSearch={search}")
                 .ToListAsync();
         }
 
-        public async Task<IActionResult> OnGetJsonAsync(string system, string academicYear, bool hasEnrols, bool showOutstanding, string search)
+        public async Task<IActionResult> OnGetJsonAsync(string system, string academicYear, bool requireEnrols, bool showOutstanding, string search)
         {
             if (String.IsNullOrEmpty(search))
             {
@@ -55,15 +50,10 @@ namespace WLCProgressions.Pages.CourseGroups
 
             //CourseGroup = await _context.CourseGroup.ToListAsync();
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
-            var systemParam = new SqlParameter("@System", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
-            var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
-            var hasEnrolsParam = new SqlParameter("@HasEnrols", hasEnrols);
-            var showOutstandingParam = new SqlParameter("@ShowOutstanding", showOutstanding);
-            var searchParam = new SqlParameter("@CourseSearch", search);
 
             CourseGroup = await _context.CourseGroup
-                .FromSql("EXEC SPR_PRG_GetCourseGroupList @System, @AcademicYear, @HasEnrols, @ShowOutstanding, @CourseSearch", systemParam, academicYearParam, hasEnrolsParam, showOutstandingParam, searchParam)
+                .FromSqlInterpolated($"EXEC SPR_PRG_GetCourseGroupList @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @RequireEnrols={requireEnrols}, @ShowOutstanding={showOutstanding}, @CourseSearch={search}")
                 .ToListAsync();
 
             var collectionWrapper = new

@@ -26,15 +26,12 @@ namespace WLCProgressions.Shared
         public static async Task<string> GetFullName(string system, string academicYear, string username, ApplicationDbContext _context, IConfiguration _configuration)
         {
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
-            var SystemParam = new SqlParameter("@system", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
-            var AcademicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
-            var @UserNameParam = new SqlParameter("@UserName", username);
 
-
-            StaffMember = await _context.StaffMember
-                .FromSql("EXEC SPR_PRG_GetStaffMember @System, @AcademicYear, @UserName", SystemParam, AcademicYearParam, @UserNameParam)
-                .FirstOrDefaultAsync();
+            StaffMember = (await _context.StaffMember
+                .FromSqlInterpolated($"EXEC SPR_PRG_GetStaffMember @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @UserName={username}")
+                .ToListAsync())
+                .FirstOrDefault();
 
             if (StaffMember != null)
             {

@@ -37,13 +37,12 @@ namespace WLCProgressions.Pages.Students
 
             //Student = await _context.Student.FirstOrDefaultAsync(m => m.StudentRef == StudentRef);
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
-            var SystemParam = new SqlParameter("@system", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
-            var AcademicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
-            var StudentRefParam = new SqlParameter("@StudentRef", studentRef);
 
-            Student = await _context.Student
-                .FromSql("EXEC SPR_PRG_GetStudent @System, @AcademicYear, @StudentRef", SystemParam, AcademicYearParam, StudentRefParam).FirstOrDefaultAsync();
+            Student = (await _context.Student
+                .FromSqlInterpolated($"EXEC SPR_PRG_GetStudent @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @StudentRef={studentRef}")
+                .ToListAsync())
+                .FirstOrDefault();
 
             if (Student == null)
             {
@@ -67,13 +66,9 @@ namespace WLCProgressions.Pages.Students
             {
                 //await _context.SaveChangesAsync();
                 string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
-                var SystemParam = new SqlParameter("@System", systemDB);
-                var AcademicYearParam = new SqlParameter("@AcademicYear", Student.AcademicYear);
-                var StudentRefParam = new SqlParameter("@StudentRef", Student.StudentRef);
-                var DestinationParam = new SqlParameter("@Destination", SqlDbType.Int);
-                DestinationParam.Value = (object)Student.DestinationCode ?? DBNull.Value;
-                var UsernameParam = new SqlParameter("@Username", User.Identity.Name.Split('\\').Last());
-                await _context.Database.ExecuteSqlCommandAsync("EXEC SPR_PRG_UpdateDestination @System, @AcademicYear, @StudentRef, @Destination, @Username", SystemParam, AcademicYearParam, StudentRefParam, DestinationParam, UsernameParam);
+
+                await _context.Database
+                    .ExecuteSqlInterpolatedAsync($"EXEC SPR_PRG_UpdateDestination @System={systemDB}, @AcademicYear={Student.AcademicYear}, @StudentRef={Student.StudentRef}, @Destination={Student.DestinationCode}, @Username={User.Identity.Name.Split('\\').Last()}");
             }
             catch (DbUpdateConcurrencyException e)
             {

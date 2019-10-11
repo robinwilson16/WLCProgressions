@@ -36,13 +36,10 @@ namespace WLCProgressions.Pages.SelectLists
             }
 
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
-            var systemParam = new SqlParameter("@system", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
-            var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
-            var domainParam = new SqlParameter("@Domain", domain);
 
             SelectListData = await _context.SelectListData
-                .FromSql("EXEC SPR_PRG_SelectListData @System, @AcademicYear, @Domain", systemParam, academicYearParam, domainParam)
+                .FromSqlInterpolated($"EXEC SPR_PRG_SelectListData @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @Domain={domain}")
                 .ToListAsync();
         }
 
@@ -54,13 +51,10 @@ namespace WLCProgressions.Pages.SelectLists
             }
 
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
-            var systemParam = new SqlParameter("@system", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
-            var academicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
-            var domainParam = new SqlParameter("@Domain", domain);
 
             SelectListData = await _context.SelectListData
-                .FromSql("EXEC SPR_PRG_SelectListData @System, @AcademicYear, @Domain", systemParam, academicYearParam, domainParam)
+                .FromSqlInterpolated($"EXEC SPR_PRG_SelectListData @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @Domain={domain}")
                 .ToListAsync();
 
             var collectionWrapper = new

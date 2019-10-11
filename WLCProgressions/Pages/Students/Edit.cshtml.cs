@@ -36,13 +36,12 @@ namespace WLCProgressions.Pages.Students
 
             //Student = await _context.Student.FirstOrDefaultAsync(m => m.StudentRef == id);
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
-            var systemParam = new SqlParameter("@system", systemDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(AcademicYear, _context);
-            var AcademicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
-            var StudentRefParam = new SqlParameter("@StudentRef", StudentRef);
 
-            Student = await _context.Student
-                .FromSql("EXEC SPR_PRG_GetStudent @System, @AcademicYear, @StudentRef", systemParam, AcademicYearParam, StudentRefParam).FirstOrDefaultAsync();
+            Student = (await _context.Student
+                .FromSqlInterpolated($"EXEC SPR_PRG_GetStudent @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @StudentRef={StudentRef}")
+                .ToListAsync())
+                .FirstOrDefault();
 
             if (Student == null)
             {

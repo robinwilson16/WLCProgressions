@@ -28,33 +28,23 @@ namespace WLCProgressions.Pages.Students
         public async Task OnGetAsync(string system, string systemILP, string AcademicYear, int CourseID, int GroupID)
         {
             //Student = await _context.Student.ToListAsync();
-            string SystemDB = DatabaseSelector.GetDatabase(_configuration, system);
-            var SystemParam = new SqlParameter("@system", SystemDB);
+            string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
             string SystemILPDB = DatabaseSelector.GetILPDatabase(_configuration, systemILP, system);
-            var SystemILPParam = new SqlParameter("@systemILP", SystemILPDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(AcademicYear, _context);
-            var AcademicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
-            var CourseIDParam = new SqlParameter("@CourseID", CourseID);
-            var GroupIDParam = new SqlParameter("@GroupID", GroupID);
 
             Student = await _context.Student
-                .FromSql("EXEC SPR_PRG_GetStudentList @System, @SystemILP, @AcademicYear, @CourseID, @GroupID", SystemParam, SystemILPParam, AcademicYearParam, CourseIDParam, GroupIDParam)
+                .FromSqlInterpolated($"EXEC SPR_PRG_GetStudentList @System={systemDB}, @SystemILP={SystemILPDB}, @AcademicYear={CurrentAcademicYear}, @CourseID={CourseID}, @GroupID={GroupID}")
                 .ToListAsync();
         }
 
         public async Task<IActionResult> OnGetJsonAsync(string system, string systemILP, string AcademicYear, int CourseID, int GroupID)
         {
             string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
-            var SystemParam = new SqlParameter("@system", systemDB);
             string SystemILPDB = DatabaseSelector.GetILPDatabase(_configuration, systemILP, system);
-            var SystemILPParam = new SqlParameter("@systemILP", SystemILPDB);
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(AcademicYear, _context);
-            var AcademicYearParam = new SqlParameter("@AcademicYear", CurrentAcademicYear);
-            var CourseIDParam = new SqlParameter("@CourseID", CourseID);
-            var GroupIDParam = new SqlParameter("@GroupID", GroupID);
 
             Student = await _context.Student
-                .FromSql("EXEC SPR_PRG_GetStudentList @System, @SystemILP, @AcademicYear, @CourseID, @GroupID", SystemParam, SystemILPParam, AcademicYearParam, CourseIDParam, GroupIDParam)
+                .FromSqlInterpolated ($"EXEC SPR_PRG_GetStudentList @System={systemDB}, @SystemILP={SystemILPDB}, @AcademicYear={CurrentAcademicYear}, @CourseID={CourseID}, @GroupID={GroupID}")
                 .ToListAsync();
 
             var collectionWrapper = new
