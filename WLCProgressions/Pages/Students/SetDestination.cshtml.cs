@@ -69,6 +69,8 @@ namespace WLCProgressions.Pages.Students
 
                 await _context.Database
                     .ExecuteSqlInterpolatedAsync($"EXEC SPR_PRG_UpdateDestination @System={systemDB}, @AcademicYear={Student.AcademicYear}, @StudentRef={Student.StudentRef}, @Destination={Student.DestinationCode}, @Username={User.Identity.Name.Split('\\').Last()}");
+
+                result = "{ saved: \"Y\", error: \"\" }";
             }
             catch (DbUpdateConcurrencyException e)
             {
@@ -82,8 +84,6 @@ namespace WLCProgressions.Pages.Students
                     result = "{ saved: \"N\", error: " + e.Message + " }";
                 //}
             }
-
-            result = "{ saved: \"Y\", error: \"\" }";
 
             return Content(result);
 
