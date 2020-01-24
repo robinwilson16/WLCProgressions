@@ -7,19 +7,19 @@
       "destination": "wwwroot/lib/jquery/"
     },
     {
-      "library": "twitter-bootstrap@4.3.1",
+      "library": "twitter-bootstrap@4.4.1",
       "destination": "wwwroot/lib/twitter-bootstrap/"
     },
     {
-      "library": "font-awesome@5.8.1",
+      "library": "font-awesome@5.11.2",
       "destination": "wwwroot/lib/font-awesome/"
     },
     {
-      "library": "marked@0.6.2",
+      "library": "marked@0.8.0",
       "destination": "wwwroot/lib/marked/"
     },
     {
-      "library": "Chart.js@2.8.0",
+      "library": "Chart.js@2.9.3",
       "destination": "wwwroot/lib/Chart.js/"
     },
     {
