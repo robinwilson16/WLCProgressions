@@ -21,11 +21,11 @@
     {
       "library": "Chart.js@2.9.3",
       "destination": "wwwroot/lib/Chart.js/"
-    },
-    {
-      "provider": "unpkg",
-      "library": "chartjs-plugin-colorschemes@0.4.0",
-      "destination": "wwwroot/lib/chartjs-plugin-colorschemes/"
     }
+    //{
+    //  "provider": "unpkg",
+    //  "library": "chartjs-plugin-colorschemes@0.4.0",
+    //  "destination": "wwwroot/lib/chartjs-plugin-colorschemes/"
+    //}
   ]
 }

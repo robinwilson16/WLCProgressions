@@ -21,16 +21,19 @@ BEGIN
 	DECLARE @ProgressionToFTDifDept INT = 25
 	DECLARE @ProgressionToPTDifDept INT = 41
 
-    -- DECLARE @StudentRef VARCHAR(50) = '11000000'
-    -- DECLARE @AcademicYear VARCHAR(5) = '18/19'
+    -- DECLARE @StudentRef NVARCHAR(50) = '11000000'
+    -- DECLARE @AcademicYear NVARCHAR(5) = '18/19'
 	-- DECLARE @CourseFromID INT = 18957
     -- DECLARE @GroupFromID INT = 23973
     -- DECLARE @CourseToID INT = 20177
     -- DECLARE @GroupToID INT = 0
-    -- DECLARE @ProgressionType VARCHAR(20) = 'EXTERNAL'
+    -- DECLARE @ProgressionType NVARCHAR(20) = 'EXTERNAL'
     -- DECLARE @OfferTypeID INT = 2
     -- DECLARE @OfferConditionID INT = 10
-    -- DECLARE @Username VARCHAR(200) = 'r.wilson'
+    -- DECLARE @Username NVARCHAR(200) = 'r.wilson'
+
+	--Set status here to control how the interview event should appear on ProPortal
+	DECLARE @ProPortalAvailability NVARCHAR(255) = 'Hidden'
 
     DECLARE @SQLString NVARCHAR(MAX);
     DECLARE @SQLParams NVARCHAR(MAX);
@@ -39,10 +42,13 @@ BEGIN
         BEGIN TRANSACTION AddProgression
         
             DECLARE @ApplicationTypeID INT;
+			DECLARE @ProPortalAvailabilityID INT;
+			DECLARE @EventTypeID INT;
             DECLARE @InterviewTypeID INT;
             DECLARE @ApplicationDecisionID INT;
             DECLARE @CollegeDecisionID INT;
             DECLARE @StudentDetailID INT;
+			DECLARE @StudentID INT;
             DECLARE @OfferConditionIDCheck INT;
             DECLARE @OfferConditionDesc NVARCHAR(MAX);
             DECLARE @CourseCode NVARCHAR(50);
@@ -201,27 +207,45 @@ BEGIN
 
             IF @CourseIDCheck IS NULL
                 BEGIN
-                    SET @ErrorMsg = 'Course ' + CAST ( @CourseToID AS VARCHAR(20) ) + ' and group ' + CAST ( COALESCE ( @GroupToID, 0 ) AS VARCHAR(20) ) + ' are not found in ' + @System + ' system';
+                    SET @ErrorMsg = N'Course ' + CAST ( @CourseToID AS NVARCHAR(20) ) + ' and group ' + CAST ( COALESCE ( @GroupToID, 0 ) AS NVARCHAR(20) ) + ' are not found in ' + @System + ' system';
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
 
             IF @OfferTypeID IS NULL
                 BEGIN
-                    SET @ErrorMsg = 'Application Offer Type is Invalid'
+                    SET @ErrorMsg = N'Application Offer Type is Invalid'
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
 
             IF @OfferConditionID IS NOT NULL AND @OfferConditionIDCheck IS NULL
                 BEGIN
-                    SET @ErrorMsg = 'Application Offer Condition is Invalid'
+                    SET @ErrorMsg = N'Application Offer Condition is Invalid'
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
 
             IF @StaffID IS NULL
                 BEGIN
-                    SET @ErrorMsg = 'Your Logged On Username is Not a Valid ProSolution User'
+                    SET @ErrorMsg = N'Your Logged On Username is Not a Valid ProSolution User'
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
+
+			SET @SQLString = 
+                N'SELECT TOP 1 
+                    @ProPortalAvailabilityIDOUT = PPA.ProPortalAvailabilityID
+                FROM ' + @System + '.dbo.ProPortalAvailability PPA 
+                WHERE 
+                    PPA.Description = @ProPortalAvailability';
+
+            SET @SQLParams = 
+                N'@ProPortalAvailability NVARCHAR(255),
+				@ProPortalAvailabilityIDOUT INT OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,  
+				@ProPortalAvailability = @ProPortalAvailability,
+				@ProPortalAvailabilityIDOUT = @ProPortalAvailabilityID OUTPUT;
+
 
             /*Set IDs based on if progression is internal or external (cross dept)*/
             IF @ProgressionType = 'INTERNAL'
@@ -248,18 +272,21 @@ BEGIN
 
                     SET @SQLString = 
                         N'SELECT TOP 1 
-                            @InterviewTypeIDOUT = INTT.InterviewTypeID 
-                        FROM ' + @System + '.dbo.InterviewType INTT 
+                            @EventTypeIDOUT = EVTST.EventTypeID,
+							@InterviewTypeIDOUT = EVTST.EventSubTypeID 
+                        FROM ' + @System + '.dbo.StudentEventSubTypes EVTST 
                         WHERE 
-                            INTT.IsAvailable = 1 
-                            AND INTT.Description = ''Progression Interview''';
+                            EVTST.IsEnabled = 1 
+                            AND EVTST.Description = ''Progression Interview''';
 
                     SET @SQLParams = 
-                        N'@InterviewTypeIDOUT INT OUTPUT';
+                        N'@EventTypeIDOUT INT OUTPUT,
+						@InterviewTypeIDOUT INT OUTPUT';
 
                     EXECUTE sp_executesql 
                         @SQLString, 
                         @SQLParams,  
+						@EventTypeIDOUT = @EventTypeID OUTPUT,
                         @InterviewTypeIDOUT = @InterviewTypeID OUTPUT;
 
                     SET @SQLString = 
@@ -319,18 +346,21 @@ BEGIN
                     
                     SET @SQLString = 
                         N'SELECT TOP 1 
-                            @InterviewTypeIDOUT = INTT.InterviewTypeID 
-                        FROM ' + @System + '.dbo.InterviewType INTT 
+                            @EventTypeIDOUT = EVTST.EventTypeID,
+							@InterviewTypeIDOUT = EVTST.EventSubTypeID 
+                        FROM ' + @System + '.dbo.StudentEventSubTypes EVTST 
                         WHERE 
-                            INTT.IsAvailable = 1 
-                            AND INTT.Description = ''Tutor Reference''';
+                            EVTST.IsEnabled = 1 
+                            AND EVTST.Description = ''Tutor Reference''';
 
                     SET @SQLParams = 
-                        N'@InterviewTypeIDOUT INT OUTPUT';
+                        N'@EventTypeIDOUT INT OUTPUT,
+						@InterviewTypeIDOUT INT OUTPUT';
 
                     EXECUTE sp_executesql 
                         @SQLString, 
                         @SQLParams,  
+						@EventTypeIDOUT = @EventTypeID OUTPUT,
                         @InterviewTypeIDOUT = @InterviewTypeID OUTPUT;
 
                     SET @ApplicationDecisionID = NULL
@@ -339,13 +369,13 @@ BEGIN
 
             IF @ApplicationTypeID IS NULL
                 BEGIN
-                    SET @ErrorMsg = 'Correct Application Type ID Cannot Be Found in ' + @System + ' Database'
+                    SET @ErrorMsg = N'Correct Application Type ID Cannot Be Found in ' + @System + ' Database'
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
 
             IF @InterviewTypeID IS NULL
                 BEGIN
-                    SET @ErrorMsg = 'Correct Interview Type ID Cannot Be Found in in ' + @System + ' Database'
+                    SET @ErrorMsg = N'Correct Event Sub Type ID Cannot Be Found in in ' + @System + ' Database'
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
 
@@ -378,14 +408,15 @@ BEGIN
                 END TRY
 
                 BEGIN CATCH
-                    SET @ErrorMsg = 'Error updating destination in ' + @System + ' Database'
+                    SET @ErrorMsg = N'Error updating destination in ' + @System + ' Database'
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END CATCH
                 
             /*First see if student detail record exists for progression year*/
             SET @SQLString = 
                 N'SELECT 
-                    @studentDetailIDOUT = SD.StudentDetailID 
+                    @StudentDetailIDOUT = SD.StudentDetailID,
+					@StudentIDOUT = SD.StudentID
                 FROM ' + @System + '.dbo.StudentDetail SD 
                 WHERE 
                     SD.AcademicYearID = @AcademicYear 
@@ -394,20 +425,23 @@ BEGIN
             SET @SQLParams = 
                 N'@AcademicYear NVARCHAR(5),
                 @StudentRef NVARCHAR(50),
-                @studentDetailIDOUT INT OUTPUT';
+                @StudentDetailIDOUT INT OUTPUT,
+				@StudentIDOUT INT OUTPUT';
 
             EXECUTE sp_executesql 
                 @SQLString, 
                 @SQLParams,  
                 @AcademicYear = @AcademicYear,
                 @StudentRef = @StudentRef,
-                @studentDetailIDOUT = @studentDetailID OUTPUT; 
+                @StudentDetailIDOUT = @studentDetailID OUTPUT,
+				@StudentIDOUT = @StudentID OUTPUT;
 
             /*Create record if required*/
             IF @StudentDetailID IS NULL
             BEGIN
                 DECLARE @StudentDetailInserted TABLE (
-                    StudentDetailID INT
+                    StudentDetailID INT,
+					StudentID INT
                 )
 
                 SET @SQLString = 
@@ -706,7 +740,7 @@ BEGIN
                         GDPRAllowContactByPost,
                         GDPRAllowContactByEmail
                     )
-                    OUTPUT INSERTED.StudentDetailID
+                    OUTPUT INSERTED.StudentDetailID, INSERTED.StudentID
                     SELECT
                         SD.StudentID,
                         SD.AcademicYearID,
@@ -1322,11 +1356,12 @@ BEGIN
                     @Username = @Username; 
 
                 SET @StudentDetailID = (SELECT SDI.StudentDetailID FROM @StudentDetailInserted SDI)
+				SET @StudentID = (SELECT SDI.StudentID FROM @StudentDetailInserted SDI)
             END
 
             IF @StudentDetailID IS NULL
                 BEGIN
-                    SET @ErrorMsg = 'Unable to determine Student Detail ID in Academic Year ' + @AcademicYear;
+                    SET @ErrorMsg = N'Unable to determine Student Detail ID in Academic Year ' + @AcademicYear;
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
 
@@ -1358,7 +1393,7 @@ BEGIN
             
             IF @CourseCode IS NOT NULL
                 BEGIN
-                    SET @ErrorMsg = 'Learner is already enrolled to ' + @CourseCode
+                    SET @ErrorMsg = N'Learner is already enrolled to ' + @CourseCode
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
 
@@ -1391,7 +1426,7 @@ BEGIN
         
             IF @CourseCode IS NOT NULL
                 BEGIN
-                    SET @ErrorMsg = 'Learner has already applied to ' + @CourseCode + ' in Academic Year ' + @AcademicYear;
+                    SET @ErrorMsg = N'Learner has already applied to ' + @CourseCode + ' in Academic Year ' + @AcademicYear;
                     RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
                 END
 
@@ -1495,7 +1530,7 @@ BEGIN
                 @CourseCodeOUT = @CourseCode OUTPUT; 
 
             DECLARE @ApplicationID INT;
-            DECLARE @ActivityCode VARCHAR(50);
+            DECLARE @ActivityCode NVARCHAR(50);
             DECLARE @SID INT;
 
             SELECT 
@@ -1506,7 +1541,7 @@ BEGIN
 
             IF @ApplicationID IS NULL 
             BEGIN
-                SET @ErrorMsg = 'Unable to add the application against ' + @CourseCode + ' in Academic Year ' + @AcademicYear;
+                SET @ErrorMsg = N'Unable to add the application against ' + @CourseCode + ' in Academic Year ' + @AcademicYear;
                 RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
             END
 
@@ -1572,7 +1607,7 @@ BEGIN
                     ACT.Code = @ActivityCode';
 
             SET @SQLParams = 
-                N'@ActivityCode VARCHAR(50),
+                N'@ActivityCode NVARCHAR(50),
                 @ActivityIDCheckOUT INT OUTPUT';
 
             EXECUTE sp_executesql 
@@ -1583,7 +1618,7 @@ BEGIN
 
             IF @ActivityIDCheck IS NOT NULL
             BEGIN
-                SET @ErrorMsg = 'Unable to add register activity with code "' + @ActivityCode + '" in Academic Year ' + @AcademicYear + ' as it already exists';
+                SET @ErrorMsg = N'Unable to add register activity with code "' + @ActivityCode + '" in Academic Year ' + @AcademicYear + ' as it already exists';
                 RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
             END
 
@@ -1615,7 +1650,7 @@ BEGIN
             SET @SQLParams = 
                 N'@AcademicYear NVARCHAR(5),
                 @StudentRef NVARCHAR(50),
-                @ActivityCode VARCHAR(50),
+                @ActivityCode NVARCHAR(50),
                 @ActivityTypeID INT,
                 @SID INT,
                 @Username NVARCHAR(200)';
@@ -1635,7 +1670,7 @@ BEGIN
 
             IF @ActivityID IS NULL 
             BEGIN
-                SET @ErrorMsg = 'Unable to add register activity with code "' + @ActivityCode + '" in Academic Year ' + @AcademicYear;
+                SET @ErrorMsg = N'Unable to add register activity with code "' + @ActivityCode + '" in Academic Year ' + @AcademicYear;
                 RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
             END
 
@@ -1677,7 +1712,7 @@ BEGIN
 
             IF @ActivityOccurrenceID IS NULL 
             BEGIN
-                SET @ErrorMsg = 'Unable to add register activity occurrence for activity ID "' + CAST ( @ActivityID AS VARCHAR(20) ) + '" in Academic Year ' + @AcademicYear;
+                SET @ErrorMsg = N'Unable to add register activity occurrence for activity ID "' + CAST ( @ActivityID AS NVARCHAR(20) ) + '" in Academic Year ' + @AcademicYear;
                 RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
             END
 
@@ -1705,7 +1740,7 @@ BEGIN
 
             IF @TimetabledResourceIDCheck IS NOT NULL
             BEGIN
-                SET @ErrorMsg = 'Unable to attach staff member to register occurrence "' + @ActivityCode + '" in Academic Year ' + @AcademicYear + ' as it already exists';
+                SET @ErrorMsg = N'Unable to attach staff member to register occurrence "' + @ActivityCode + '" in Academic Year ' + @AcademicYear + ' as it already exists';
                 RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
             END
             
@@ -1745,11 +1780,13 @@ BEGIN
             DECLARE @InterviewIDCheck INT
             SET @SQLString = 
                 N'SELECT 
-                    @InterviewIDCheckOUT = IV.InterviewID 
-                FROM ' + @System + '.dbo.Interview IV 
+                    @InterviewIDCheckOUT = SE.StudentEventID 
+                FROM ' + @System + '.dbo.StudentEvents SE
+				INNER JOIN ' + @System + '.dbo.Events E
+					ON E.EventID = SE.EventID
                 WHERE 
-                    IV.ApplicationID = @ApplicationID
-                    AND IV.ActivityID = @ActivityID';
+                    SE.ApplicationID = @ApplicationID
+                    AND E.ActivityID = @ActivityID';
             
             SET @SQLParams = 
                 N'@ApplicationID INT,
@@ -1765,7 +1802,7 @@ BEGIN
 
             IF @InterviewIDCheck IS NOT NULL
             BEGIN
-                SET @ErrorMsg = 'Unable to attach staff member to register occurrence "' + @ActivityCode + '" in Academic Year ' + @AcademicYear + 'as it already exists'
+                SET @ErrorMsg = N'Unable to attach staff member to register occurrence "' + @ActivityCode + '" in Academic Year ' + @AcademicYear + 'as it already exists'
                 RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
             END
 
@@ -1789,44 +1826,152 @@ BEGIN
                 @AcademicYear = @AcademicYear,
                 @CourseToID = @CourseToID,
                 @SiteIDOUT = @SiteID OUTPUT;
+			
+			--Insert Inteview (moved from Interview table in ProSolution 20.2)
+			DECLARE @EventInserted TABLE (
+                EventID INT
+            )
 
             SET @SQLString = 
-                N'INSERT INTO ' + @System + '.dbo.Interview
+                N'INSERT INTO ' + @System + '.dbo.Events
                 (
-                    ApplicationID,
-                    SiteID,
-                    InterviewAttendanceID,
-                    Notes,
-                    InterviewTypeID,
                     ActivityID,
-                    CreatedBy,
-                    CreatedDate
+					EventTypeID,
+					EventSubTypeID,
+					Date,
+					Time,
+					Duration,
+					StaffID,
+					SiteID,
+					ProPortalAvailabilityID,
+					StudentAttendance,
+					Notes,
+					CreatedBy,
+					CreatedDate
                 )
+				OUTPUT INSERTED.EventID
                 SELECT
-                    ApplicationID = @ApplicationID,
-                    SiteID = @SiteID,
-                    InterviewAttendanceID = 6,
-                    Notes = NULL,
-                    InterviewTypeID = @InterviewTypeID,
                     ActivityID = @ActivityID,
+					EventTypeID = @EventTypeID,
+					EventSubTypeID = @InterviewTypeID,
+					Date = GETDATE(),
+					Time = GETDATE(),
+					Duration = 0,
+					StaffID = @StaffID,
+					SiteID = @SiteID,
+					ProPortalAvailabilityID = @ProPortalAvailabilityID,
+					StudentAttendance = 1,
+					Notes = NULL,
                     CreatedBy = @Username,
                     CreatedDate = GETDATE()';
             
             SET @SQLParams = 
-                N'@ApplicationID INT,
-                @ActivityID INT,
-                @InterviewTypeID INT,
-                @SiteID INT,
+                N'@ActivityID INT,
+				@EventTypeID INT,
+				@InterviewTypeID INT,
+				@StaffID INT,
+				@SiteID INT,
+				@ProPortalAvailabilityID INT,
+                @Username NVARCHAR(200)';
+
+			INSERT INTO @EventInserted
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams,
+				@ActivityID = @ActivityID,
+				@EventTypeID = @EventTypeID,
+				@InterviewTypeID = @InterviewTypeID,  
+				@StaffID = @StaffID,
+                @SiteID = @SiteID,
+				@ProPortalAvailabilityID = @ProPortalAvailabilityID,
+                @Username = @Username;
+
+			DECLARE @EventID INT = (SELECT E.EventID FROM @EventInserted E)
+
+
+			DECLARE @StudentEventInserted TABLE (
+                StudentEventID INT
+            )
+			SET @SQLString = 
+                N'INSERT INTO ' + @System + '.dbo.StudentEvents
+                (
+                    EventID,
+					StudentID,
+					ApplicationID,
+					Prompted,
+                    AttendanceID,
+					Notes,
+					ProPortalAvailabilityID,
+                    CreatedBy,
+                    CreatedDate
+                )
+				OUTPUT INSERTED.StudentEventID
+                SELECT
+                    EventID = @EventID,
+					StudentID = @StudentID,
+					ApplicationID = @ApplicationID,
+					Prompted = 0,
+                    AttendanceID = 6,
+					Notes = NULL,
+					ProPortalAvailabilityID = @ProPortalAvailabilityID,
+                    CreatedBy = @Username,
+                    CreatedDate = GETDATE()';
+            
+            SET @SQLParams = 
+                N'@EventID INT,
+				@StudentID INT,
+				@ApplicationID INT,
+				@ProPortalAvailabilityID INT,
                 @Username NVARCHAR(200)';
 
             EXECUTE sp_executesql 
                 @SQLString, 
                 @SQLParams,
+				@EventID = @EventID,
+				@StudentID = @StudentID,
                 @ApplicationID = @ApplicationID,
-                @ActivityID = @ActivityID,
-                @InterviewTypeID = @InterviewTypeID,
-                @SiteID = @SiteID,
+				@ProPortalAvailabilityID = @ProPortalAvailabilityID,
                 @Username = @Username;
+
+			DECLARE @StudentEventID INT = (SELECT SE.StudentEventID FROM @StudentEventInserted SE)
+
+			--SET @SQLString = 
+   --             N'INSERT INTO ' + @System + '.dbo.Interview
+   --             (
+   --                 ApplicationID,
+   --                 SiteID,
+   --                 InterviewAttendanceID,
+   --                 Notes,
+   --                 InterviewTypeID,
+   --                 ActivityID,
+   --                 CreatedBy,
+   --                 CreatedDate
+   --             )
+   --             SELECT
+   --                 ApplicationID = @ApplicationID,
+   --                 SiteID = @SiteID,
+   --                 InterviewAttendanceID = 6,
+   --                 Notes = NULL,
+   --                 InterviewTypeID = @InterviewTypeID,
+   --                 ActivityID = @ActivityID,
+   --                 CreatedBy = @Username,
+   --                 CreatedDate = GETDATE()';
+            
+   --         SET @SQLParams = 
+   --             N'@ApplicationID INT,
+   --             @ActivityID INT,
+   --             @InterviewTypeID INT,
+   --             @SiteID INT,
+   --             @Username NVARCHAR(200)';
+
+   --         EXECUTE sp_executesql 
+   --             @SQLString, 
+   --             @SQLParams,
+   --             @ApplicationID = @ApplicationID,
+   --             @ActivityID = @ActivityID,
+   --             @InterviewTypeID = @InterviewTypeID,
+   --             @SiteID = @SiteID,
+   --             @Username = @Username;
 
         COMMIT TRANSACTION AddProgression
     END TRY
