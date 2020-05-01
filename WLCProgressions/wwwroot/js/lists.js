@@ -565,16 +565,17 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                 <table id="EnrolmentList" class="table table-sm table-hover">
                     <thead>
                         <tr>
-                            <th scope="col">Student<br />Ref</th>                                
-                            <th scope="col">Surname</th>
-                            <th scope="col">Forename</th>
-                            <th scope="col">Age 31<sup>st</sup><br />Aug ${academicYear.substring(3, 5)}</th>
-                            <th scope="col">Completion</th>
-                            <th scope="col" class="text-center">Attend %</th>
-                            <th scope="col" class="text-center">Risk</th>
-                            <th scope="col" class="text-center">${progressionYear} Apps<br />and Enrols</th>
-                            <th scope="col" class="text-center">Progress</th>
-                            <th scope="col" class="text-center">Destination</th>
+                            <th scope="col" class="THSmall">Student<br />Ref</th>                                
+                            <th scope="col" class="THSmall">Surname</th>
+                            <th scope="col" class="THSmall">Forename</th>
+                            <th scope="col" class="THSmall">Age 31<sup>st</sup><br />Aug ${academicYear.substring(3, 5)}</th>
+                            <th scope="col" class="THSmall">Completion</th>
+                            <th scope="col" class="text-center THSmall">Attend %</th>
+                            <th scope="col" class="text-center THSmall">Risk<br />(Pre-Covid-19)</th>
+                            <th scope="col" class="text-center THSmall">Risk<br />(Current)</th>
+                            <th scope="col" class="text-center THSmall">${progressionYear} Apps<br />and Enrols</th>
+                            <th scope="col" class="text-center THSmall">Progress</th>
+                            <th scope="col" class="text-center THSmall">Destination</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -623,6 +624,12 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                 <ul class='RiskSummary'>
                     <li>Risk: ${students[student].riskName}</li>
                     <li>Risk Colour: ${students[student].riskColour}</li>
+                </ul>`;
+
+                let riskSummaryPreCovid19 = `
+                <ul class='RiskSummary'>
+                    <li>Risk: ${students[student].riskNamePreCovid19}</li>
+                    <li>Risk Colour: ${students[student].riskColourPreCovid19}</li>
                 </ul>`;
 
                 let appsArr = null;
@@ -692,7 +699,10 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                                 </div>
                             </td>
                             <td class="text-center">
-                                <div class="RiskIndicator ${students[student].riskColour} LearnerPopover" data-toggle="popover" aria-describedby="${academicYear} ProMonitor Risk Rating for ${students[student].forename} ${students[student].surname}" data-content="${riskSummary}"></div>
+                                <div class="RiskIndicator ${students[student].riskColourPreCovid19} LearnerPopover" data-toggle="popover" aria-describedby="${academicYear} ProMonitor pre-Covid-19 Risk Rating for ${students[student].forename} ${students[student].surname}" data-content="${riskSummaryPreCovid19}"></div>
+                            </td>
+                            <td class="text-center">
+                                <div class="RiskIndicator ${students[student].riskColour} LearnerPopover" data-toggle="popover" aria-describedby="${academicYear} ProMonitor Current Risk Rating for ${students[student].forename} ${students[student].surname}" data-content="${riskSummary}"></div>
                             </td>
                             <td class="text-center">
                                 ${appsButton}

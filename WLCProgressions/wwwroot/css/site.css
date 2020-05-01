@@ -38,6 +38,10 @@
     font-size: 0.8em;
 }
 
+.THSmall {
+    font-size: 0.8em;
+}
+
 .DestinationOptionsSelectList {
     font-size: 0.94em;
     max-width: 200px;
@@ -47,6 +51,8 @@
     width: 20px;
     height: 20px;
     cursor: pointer;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .RiskIndicator.Green {

@@ -35,7 +35,19 @@ namespace WLCProgressions.Models
         [StringLength(50)]
         public string Completion { get; set; }
         public int RiskCode { get; set; }
+        
+        [StringLength(25)]
+        public string RiskName { get; set; }
 
+        [StringLength(20)]
+        public string RiskColour { get; set; }
+        public int RiskCodePreCovid19 { get; set; }
+
+        [StringLength(25)]
+        public string RiskNamePreCovid19 { get; set; }
+
+        [StringLength(20)]
+        public string RiskColourPreCovid19 { get; set; }
         public int ClassesPlanned { get; set; }
         public int ClassesCounted { get; set; }
         public int ClassesMarked { get; set; }
@@ -47,12 +59,6 @@ namespace WLCProgressions.Models
         public int ClassesLate { get; set; }
 
         public double AttendPer { get; set; }
-
-        [StringLength(25)]
-        public string RiskName { get; set; }
-
-        [StringLength(20)]
-        public string RiskColour { get; set; }
 
         public int NumAppsNextYear { get; set; }
 
