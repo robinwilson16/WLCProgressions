@@ -79,5 +79,7 @@ namespace WLCProgressions.Models
         public int OfferType { get; set; }
 
         public int OfferCondition { get; set; }
+
+        public bool HasAlreadyApplied { get; set; }
     }
 }

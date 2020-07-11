@@ -99,15 +99,17 @@ async function saveProgressions(system, academicYear, students, courseFromID, gr
     let numStudents = 0;
     let numProgressedStudents = 0;
     let numSaved = 0;
+    let numAlreadyOnCourse = 0;
     let numErrors = 0;
     let studentRef = "0";
     let progressLearner = false;
     let offerTypeID = 0;
     let offerConditionID = 0;
+    let alreadyProgressedStudents = [];
 
     for (let student in students) {
         numStudents += 1;
-
+        
         studentRef = students[student].studentRef;
         progressLearner = students[student].progressLearner;
         offerTypeID = students[student].offerType;
@@ -122,28 +124,141 @@ async function saveProgressions(system, academicYear, students, courseFromID, gr
         }
         else {
             numProgressedStudents += 1;
+            let result;
+            
+            let hasAlreadyApplied = await hasStudentAlreadyApplied(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, antiForgeryTokenID);
 
-            var result = await saveProgression(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, antiForgeryTokenID);
-            numSaved += result;
+            if (hasAlreadyApplied === 1) {
+                alreadyProgressedStudents.push(studentRef);
+                numAlreadyOnCourse += 1
+            }
+            else {
+                //Only attempt to save progression if student has not already been progressed to this course
+                result = await saveProgression(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, antiForgeryTokenID);
+                numSaved += result;
+            }
         }
     }
 
     //Close modal
     $("#ProgressionModal").modal("hide");
 
-    numErrors = numProgressedStudents - numSaved;
+    let title = ``;
+    let content = ``;
+
+    numErrors = numProgressedStudents - numSaved - numAlreadyOnCourse;
     if (numStudents === 0) {
-        doErrorModal("Error Saving Progression (NSR: No Students Retrieved)", "Sorry an error occurred saving the progression of the learners.<br />Please try again.");
+        let title = `Error Saving Progression (NSR: No Students Retrieved)`;
+        let content = `
+            Sorry an error occurred saving the progression of the learners.<br />
+            Please try again.`;
+
+        doErrorModal(title, content);
     }
     else if (numProgressedStudents === 0) {
-        doErrorModal("Error Saving Progression (NSS: No Students Selected)", "No students were selected for progression.<br />Please review your selection and retry.");
+        let title = `Error Saving Progression (NSS: No Students Selected)`;
+        let content = `
+            No students were selected for progression.<br />
+            Please review your selection and retry.`;
+
+        doErrorModal(title, content);
+    }
+    else if (numAlreadyOnCourse > 0) {
+        let alreadyProgressedList = ``;
+        alreadyProgressedList += `<ul>`;
+        for (let student in students) {
+            studentRef = students[student].studentRef;
+
+            let isAlreadyProgressed = alreadyProgressedStudents.includes(studentRef);
+
+            if (isAlreadyProgressed === true) {
+                alreadyProgressedList += `<li>${students[student].surname}, ${students[student].forename} (${students[student].studentRef})</li>`;
+            }
+        }
+
+        alreadyProgressedList += `</ul>`;
+
+        let title = ``;
+        let content = `
+            <div class="alert alert-warning" role="alert">
+                Sorry an error occurred saving the progression for the following <strong>${numAlreadyOnCourse}</strong> learners as they already have applications to the course:<br />
+                ${alreadyProgressedList}
+            </div>`;
+
+        if (numSaved + numAlreadyOnCourse === numProgressedStudents) {
+            title = `Error Saving Progression (NPR1: Some Learners Already Progressed)`;
+
+            if (numProgressedStudents - numAlreadyOnCourse > 0) {
+                content += `
+                    <div class="alert alert-success" role="alert">
+                        Progression data has been successfully recorded for all <strong>${numProgressedStudents - numAlreadyOnCourse}</strong> remaining learners.
+                    </div>`;
+            }
+            
+            content += `
+                Please review the existing applications in ProSolution.`;
+        }
+        else {
+            title = `Error Saving Progression (NPR2: Some Learners Already Progressed And Errors)`;
+            content += `
+                Also an error occurred saving the progression for <strong>${numErrors}</strong> of the <strong>${numProgressedStudents - numAlreadyOnCourse}</strong> remaining learners.<br />
+                Please review the existing applications in ProSolution and retry.`;
+        }
+
+        if (numSaved + numAlreadyOnCourse === numProgressedStudents) {
+            //If some already on course and rest all successful
+            doModal(title, content);
+        }
+        else {
+            //If some already on course but also other errors
+            doErrorModal(title, content);
+        }
     }
     else if (numSaved !== numProgressedStudents) {
-        doErrorModal("Error Saving Progression (NAS: Not All Saved)", "Sorry an error occurred saving the progression for <strong>" + numErrors + "</strong> of the <strong>" + numProgressedStudents + "</strong> learners.<br />Please review the data and retry.");
+        let title = `Error Saving Progression (NAS: Not All Saved)`;
+        let content = `
+            Sorry an error occurred saving the progression for <strong>${numErrors}</strong> of the <strong>${numProgressedStudents - numAlreadyOnCourse}</strong> learners.<br />
+            Please review the data and retry.`;
+
+        doErrorModal(title, content);
     }
     else {
-        doModal("Progressions Successfully Saved", "Progression data has been successfully recorded for all <strong>" + numProgressedStudents + "</strong> learners.");
+        let title = `Progressions Successfully Saved`;
+        let content = `
+            Progression data has been successfully recorded for all <strong>${numSaved}</strong> learners.`;
+
+        doModal(title, content);
     }
+}
+
+function hasStudentAlreadyApplied(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, antiForgeryTokenID) {
+    return new Promise(resolve => {
+        let dataToLoad = "";
+
+        if (system !== null) {
+            dataToLoad = `/Students/Details/${studentRef}/${courseToID}/?handler=Json&system=${system}`;
+        }
+        else {
+            dataToLoad = `/Students/Details/${studentRef}/${courseToID}/?handler=Json`;
+        }
+
+        $.get(dataToLoad, function (data) {
+
+        })
+            .then(data => {
+                console.log(dataToLoad + " Loaded");
+
+                let hasAppliedAlready = data.student.hasAlreadyApplied;
+
+                if (hasAppliedAlready === true) {
+                    resolve(1);
+                }
+                else {
+                    resolve(0);
+                }
+            });
+        //Need to check and resolve 1 or 0
+    });
 }
 
 function saveProgression(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, antiForgeryTokenID) {

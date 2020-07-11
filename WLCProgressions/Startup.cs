@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WLCProgressions.Data;
 using Microsoft.Extensions.Hosting;
+using WLCProgressions.Models;
 
 namespace WLCProgressions
 {
@@ -39,6 +40,10 @@ namespace WLCProgressions
                     Configuration.GetConnectionString("DefaultConnection")));
 
             services.AddRazorPages();
+
+            //Enable configuration options directly in _Layout
+            services.Configure<SystemSettings>
+                (Configuration.GetSection("SystemSettings"));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
