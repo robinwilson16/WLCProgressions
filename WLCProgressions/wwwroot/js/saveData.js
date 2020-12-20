@@ -248,7 +248,11 @@ function hasStudentAlreadyApplied(system, academicYear, studentRef, courseFromID
             .then(data => {
                 console.log(dataToLoad + " Loaded");
 
-                let hasAppliedAlready = data.student.hasAlreadyApplied;
+                let hasAppliedAlready = false;
+
+                if (data.student !== null) { //Will be null if student has not yet been rolled forward
+                    hasAppliedAlready = data.student.hasAlreadyApplied; 
+                }
 
                 if (hasAppliedAlready === true) {
                     resolve(1);
