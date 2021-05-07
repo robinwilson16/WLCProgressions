@@ -6,15 +6,68 @@ CREATE PROCEDURE [dbo].[SPR_PRG_UpdateDestination]
     @Username NVARCHAR(200)
 AS
 BEGIN
-	SET NOCOUNT ON;
-    -- DECLARE @System NVARCHAR(50) = 'ProSolutionTraining';
-    -- DECLARE @AcademicYear NVARCHAR(5) = '18/19'
-    -- DECLARE @Username NVARCHAR(200) = 'r.wilson'
-    -- DECLARE @StudentRef VARCHAR(50) = '11033452'
-    -- DECLARE @Destination INT = NULL
+	SET XACT_ABORT, NOCOUNT ON;
+	SET DATEFORMAT ymd
+
+	--DECLARE @System NVARCHAR(50) = 'ProSolutionTraining';
+	--DECLARE @AcademicYear NVARCHAR(5) = '20/21'
+	--DECLARE @Username NVARCHAR(200) = 'r.wilson'
+	--DECLARE @StudentRef VARCHAR(50) = '11122080'
+	--DECLARE @Destination INT = 15
 
     DECLARE @SQLString NVARCHAR(MAX);
     DECLARE @SQLParams NVARCHAR(MAX);
+
+	--Get Latest End Date of Student to set Destination Start Date to be Latest End Date + 1 Day
+	DECLARE @LatestDestinationEndDate DATE
+	DECLARE @NewDestinationStartDate DATE
+
+	SET @SQLString = 
+        N'SELECT
+            @LatestDestinationEndDateOUT = 
+				CASE
+					WHEN CAST ( COALESCE ( ENR.ActualEndDate, ENR.ExpectedEndDate ) AS DATE ) < ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-08-01''
+						THEN ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-08-01''
+					ELSE CAST ( COALESCE ( ENR.ActualEndDate, ENR.ExpectedEndDate ) AS DATE )
+				END,
+			@NewDestinationStartDateOUT = 
+				DATEADD ( DAY, 1, 
+					CASE
+						WHEN CAST ( COALESCE ( ENR.ActualEndDate, ENR.ExpectedEndDate ) AS DATE ) < ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-08-01''
+							THEN ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-08-01''
+						ELSE CAST ( COALESCE ( ENR.ActualEndDate, ENR.ExpectedEndDate ) AS DATE )
+					END
+				)
+        FROM ' + @System + '.dbo.StudentDetail SD
+		INNER JOIN ' + @System + '.dbo.Enrolment ENR
+			ON ENR.StudentDetailID = SD.StudentDetailID
+		INNER JOIN ' + @System + '.dbo.Offering CRS
+			ON CRS.OfferingID = ENR.OfferingID
+		WHERE
+			SD.AcademicYearID = @AcademicYear
+			AND ENR.CompletionStatusID IN ( ''1'', ''2'', ''3'', ''6'' )
+			AND CAST ( COALESCE ( ENR.ActualEndDate, ENR.ExpectedEndDate ) AS DATE ) <= ''20'' + RIGHT ( SD.AcademicYearID, 2 ) + ''-07-31''
+			AND SD.RefNo = @StudentRef';
+
+    SET @SQLParams = 
+		N'@AcademicYear NVARCHAR(5),
+        @StudentRef NVARCHAR(50),
+        @LatestDestinationEndDateOUT DATE OUTPUT,
+		@NewDestinationStartDateOUT DATE OUTPUT';
+
+    EXECUTE sp_executesql 
+        @SQLString, 
+        @SQLParams, 
+		@AcademicYear = @AcademicYear, 
+        @StudentRef = @StudentRef, 
+        @LatestDestinationEndDateOUT = @LatestDestinationEndDate OUTPUT,
+		@NewDestinationStartDateOUT = @NewDestinationStartDate OUTPUT;
+
+	IF @LatestDestinationEndDate IS NULL
+		SET @LatestDestinationEndDate = DATEADD( DAY, -1, GETDATE() )
+
+	IF @NewDestinationStartDate IS NULL
+		SET @NewDestinationStartDate = GETDATE()
 
     DECLARE @DestinationID INT;
     DECLARE @DestinationCode NVARCHAR(50) = '';
@@ -192,7 +245,7 @@ BEGIN
                     SET @SQLString = 
                         N'UPDATE OC
                         SET
-                            OC.EndDate = DATEADD( DAY, -1, GETDATE() ), --Yesterday
+                            OC.EndDate = @LatestDestinationEndDate, --Yesterday
                             OC.LastModifiedBy = @Username,
                             OC.LastModifiedDate = GETDATE()
                         FROM ' + @System + '.dbo.StudentDetail SD
@@ -208,6 +261,7 @@ BEGIN
                         N'@System NVARCHAR(50),
                         @AcademicYear NVARCHAR(5),
                         @StudentRef NVARCHAR(50),
+						@LatestDestinationEndDate DATE,
                         @Username NVARCHAR(200)';
 
                     EXECUTE sp_executesql 
@@ -216,6 +270,7 @@ BEGIN
                         @System = @System, 
                         @AcademicYear = @AcademicYear, 
                         @StudentRef = @StudentRef, 
+						@LatestDestinationEndDate = @LatestDestinationEndDate,
                         @Username = @Username;
 
                     IF @Destination IS NOT NULL
@@ -238,7 +293,7 @@ BEGIN
                             )
                             SELECT
                                 LocalDestinationID = @Destination,
-                                StartDate = GETDATE(),
+                                StartDate = @NewDestinationStartDate,
                                 CollectionDate = GETDATE(),
                                 IncludeInILR = 1,
                                 StudentID = SD.StudentID,
@@ -257,6 +312,7 @@ BEGIN
                             @AcademicYear NVARCHAR(5),
                             @StudentRef NVARCHAR(50),
                             @Destination INT,
+							@NewDestinationStartDate DATE,
                             @Username NVARCHAR(200)';
 
                         EXECUTE sp_executesql 
@@ -266,6 +322,7 @@ BEGIN
                             @AcademicYear = @AcademicYear, 
                             @StudentRef = @StudentRef, 
                             @Destination = @Destination,
+							@NewDestinationStartDate = @NewDestinationStartDate,
                             @Username = @Username;
                     END
 
