@@ -9,31 +9,37 @@ CREATE PROCEDURE [dbo].[SPR_PRG_SaveProgression]
     @ProgressionType NVARCHAR(20),
     @OfferTypeID INT,
     @OfferConditionID INT,
+	@ReadyToEnrolOption NVARCHAR(20),
     @Username NVARCHAR(200)
 AS
 BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
+    SET XACT_ABORT, NOCOUNT ON;
+	SET DATEFORMAT ymd
 
 	--LocalDestinationID codes 
 	DECLARE @ProgressionToFTSameDept INT = 40
 	DECLARE @ProgressionToPTSameDept INT = 26
 	DECLARE @ProgressionToFTDifDept INT = 25
 	DECLARE @ProgressionToPTDifDept INT = 41
+	DECLARE @DestinationIsActual INT = 1
 
-    -- DECLARE @StudentRef NVARCHAR(50) = '11000000'
-    -- DECLARE @AcademicYear NVARCHAR(5) = '18/19'
-	-- DECLARE @CourseFromID INT = 18957
-    -- DECLARE @GroupFromID INT = 23973
-    -- DECLARE @CourseToID INT = 20177
-    -- DECLARE @GroupToID INT = 0
-    -- DECLARE @ProgressionType NVARCHAR(20) = 'EXTERNAL'
-    -- DECLARE @OfferTypeID INT = 2
-    -- DECLARE @OfferConditionID INT = 10
-    -- DECLARE @Username NVARCHAR(200) = 'r.wilson'
+	--DECLARE @System NVARCHAR(50) = 'ProSolution'
+	--DECLARE @StudentRef NVARCHAR(50) = '11122080'
+	--DECLARE @AcademicYear NVARCHAR(5) = '21/22'
+	--DECLARE @CourseFromID INT = 33664
+	--DECLARE @GroupFromID INT = 44409
+	--DECLARE @CourseToID INT = 39942
+	--DECLARE @GroupToID INT = 47763
+	--DECLARE @ProgressionType NVARCHAR(20) = 'EXTERNAL'
+	--DECLARE @OfferTypeID INT = 1
+	--DECLARE @OfferConditionID INT = NULL
+	--DECLARE @Username NVARCHAR(200) = 'mis.rwilson'
 
 	--Set status here to control how the interview event should appear on ProPortal
 	DECLARE @ProPortalAvailability NVARCHAR(255) = 'Hidden'
+
+	--Set the user defined field where the ReadyToEnrol option will be stored
+	DECLARE @ReadyToEnrolUserField NVARCHAR(20) = 'UserDefined4'
 
     DECLARE @SQLString NVARCHAR(MAX);
     DECLARE @SQLParams NVARCHAR(MAX);
@@ -388,6 +394,7 @@ BEGIN
                             @AcademicYear,
                             @StudentRef,
                             @Destination,
+							@DestinationIsActual,
                             @Username';
 
                     SET @SQLParams = 
@@ -395,6 +402,7 @@ BEGIN
                         @AcademicYear NVARCHAR(5),
                         @StudentRef NVARCHAR(50),
                         @Destination INT,
+						@DestinationIsActual INT,
                         @Username NVARCHAR(200)';
 
                     EXECUTE sp_executesql 
@@ -404,6 +412,7 @@ BEGIN
                         @AcademicYear = @AcademicYear,
                         @StudentRef = @StudentRef,
                         @Destination = @Destination,
+						@DestinationIsActual = @DestinationIsActual,
                         @Username = @Username;
                 END TRY
 
@@ -1453,7 +1462,8 @@ BEGIN
                     Condition,
                     CollegeDecisionID,
                     CollegeDecisionDate,
-                    UserDefined1
+                    UserDefined1,
+					' + @ReadyToEnrolUserField + '
                 )
                 --OUTPUT INSERTED.ApplicationID, INSERTED.SID INTO @ApplicationInserted
                 OUTPUT INSERTED.ApplicationID, INSERTED.SID
@@ -1477,7 +1487,8 @@ BEGIN
                             WHEN @ProgressionType = ''INTERNAL'' THEN NULL
                             WHEN SD.Email IS NULL THEN ''Yes''
                             ELSE ''No''
-                        END
+                        END,
+					' + @ReadyToEnrolUserField + ' = @ReadyToEnrolOption
                 FROM ' + @System + '.dbo.StudentDetail SD
                 INNER JOIN ' + @System + '.dbo.Offering CRS
                     ON CRS.OfferingID = @CourseToID
@@ -1505,6 +1516,7 @@ BEGIN
                 @OfferTypeID INT,
                 @OfferConditionID INT,
                 @OfferConditionDesc NVARCHAR(MAX),
+				@ReadyToEnrolOption NVARCHAR(20),
                 @ApplicationDecisionID INT,
                 @CollegeDecisionID INT,
                 @ProgressionType NVARCHAR(20),
@@ -1523,6 +1535,7 @@ BEGIN
                 @OfferTypeID = @OfferTypeID,
                 @OfferConditionID = @OfferConditionID,
                 @OfferConditionDesc = @OfferConditionDesc,
+				@ReadyToEnrolOption = @ReadyToEnrolOption,
                 @ApplicationDecisionID = @ApplicationDecisionID,
                 @CollegeDecisionID = @CollegeDecisionID,
                 @ProgressionType = @ProgressionType,
@@ -1844,7 +1857,7 @@ BEGIN
 					StaffID,
 					SiteID,
 					ProPortalAvailabilityID,
-					StudentAttendance,
+					AttendanceType,
 					Notes,
 					CreatedBy,
 					CreatedDate
@@ -1860,7 +1873,7 @@ BEGIN
 					StaffID = @StaffID,
 					SiteID = @SiteID,
 					ProPortalAvailabilityID = @ProPortalAvailabilityID,
-					StudentAttendance = 1,
+					AttendanceType = 1,
 					Notes = NULL,
                     CreatedBy = @Username,
                     CreatedDate = GETDATE()';

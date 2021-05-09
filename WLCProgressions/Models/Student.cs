@@ -72,14 +72,17 @@ namespace WLCProgressions.Models
 
         [StringLength(255)]
         public string DestinationName { get; set; }
-
+        public int? DestinationIsActual { get; set; }
         public bool DestinationChanged { get; set; }
         public bool ProgressLearner { get; set; }
 
         public int OfferType { get; set; }
 
         public int OfferCondition { get; set; }
-
+        public bool IsReadyToEnrol { get; set; }
+        
+        [StringLength(20)]
+        public string ReadyToEnrolOption { get; set; }
         public bool HasAlreadyApplied { get; set; }
     }
 }

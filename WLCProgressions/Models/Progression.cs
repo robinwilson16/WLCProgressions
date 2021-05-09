@@ -23,5 +23,7 @@ namespace WLCProgressions.Models
         public string ProgressionType { get; set; }
         public int OfferTypeID { get; set; }
         public int? OfferConditionID { get; set; }
+
+        public string ReadyToEnrolOption { get; set; }
     }
 }

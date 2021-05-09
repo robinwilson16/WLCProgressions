@@ -6,12 +6,14 @@ CREATE PROCEDURE [dbo].[SPR_PRG_GetStudentList]
 	@GroupID int
 AS
 BEGIN
-	SET NOCOUNT ON;
-    -- DECLARE @System NVARCHAR(50) = 'ProSolutionTraining'
-    -- DECLARE @SystemILP NVARCHAR(50) = 'PROMONITOR.ProMonitorTraining'
-    -- DECLARE @AcademicYear NVARCHAR(5) = '18/19'
-    -- DECLARE @CourseID int = 23799
-	-- DECLARE @GroupID int = 27244
+	SET XACT_ABORT, NOCOUNT ON;
+	SET DATEFORMAT ymd;
+
+	--DECLARE @System NVARCHAR(50) = 'ProSolution'
+	--DECLARE @SystemILP NVARCHAR(50) = 'PROMONITOR.ProMonitor'
+	--DECLARE @AcademicYear NVARCHAR(5) = '20/21'
+	--DECLARE @CourseID int = 33664
+	--DECLARE @GroupID int = 44409
 
     DECLARE @DestinationYear NVARCHAR(5)
     SET @DestinationYear = 
@@ -57,12 +59,16 @@ BEGIN
         AppliedCoursesNextYear = NYA.Courses,
         NumEnrolsNextYear = COALESCE ( NYE.NumEnrols, 0 ),
         EnrolledCoursesNextYear = NYE.Courses,
-        DestinationCode = SD.LocalDestinationID,
+        DestinationCode = DES.LocalDestinationID,
         DestinationName = DES.Description,
+		DestinationIsActual = CAST ( OC.IsActualDestination AS INT ),
         DestinationChanged = CAST ( 0 AS bit ),
 		ProgressLearner = CAST ( 0 AS bit ),
         OfferType = 0,
-        OfferCondition = 0
+        OfferCondition = 0,
+		IsReadyToEnrol = CAST ( 0 AS bit ),
+		ReadyToEnrolOption = '''',
+		HasAlreadyApplied = CAST ( 0 AS bit )
 	FROM ' + @System + '.dbo.StudentDetail SD
 	INNER JOIN ' + @System + '.dbo.Enrolment ENR
 		ON ENR.StudentDetailID = SD.StudentDetailID
@@ -74,6 +80,7 @@ BEGIN
         SELECT
             OC.StudentID,
             OC.LocalDestinationID,
+			OC.IsActualDestination,
             RowNum = 
                 ROW_NUMBER () OVER (
                     PARTITION BY

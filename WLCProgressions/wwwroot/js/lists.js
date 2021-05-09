@@ -426,13 +426,24 @@ function listLoadedCourseToFunctions() {
                         <td>
                             <div class="row">
                                 <div class="col-md">
-                                    <select id="OfferTypeSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select OfferTypeSelectList" data-id="${students[student].studentRef}">
+                                    <select id="OfferTypeSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select ProgressionInputField OfferTypeSelectList" data-id="${students[student].studentRef}">
                                         <option value="" hidden disabled selected>Offer Type...</option>
                                     </select>
                                 </div>
                                 <div id="OfferConditionSelectListCol-${students[student].studentRef}" class="col-md d-none OfferConditionSelectListCol">
-                                    <select id="OfferConditionSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select OfferConditionSelectList" data-id="${students[student].studentRef}">
+                                    <select id="OfferConditionSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select ProgressionInputField OfferConditionSelectList" data-id="${students[student].studentRef}">
                                         <option value="" hidden disabled selected>Offer Condition...</option>
+                                    </select>
+                                </div>
+                                <div id="OfferReadyToEnrolCol-${students[student].studentRef}" class="col-md d-none OfferReadyToEnrolCol">
+                                    <div class="custom-control custom-switch">
+                                        <input id="OfferReadyToEnrol-${students[student].studentRef}" type="checkbox" class="custom-control-input ProgressionInputField OfferReadyToEnrol" data-id="${students[student].studentRef}">
+                                        <label class="custom-control-label" for="OfferReadyToEnrol-${students[student].studentRef}">Ready To Enrol</label>
+                                    </div>
+                                </div>
+                                <div id="OfferReadyToEnrolSelectListCol-${students[student].studentRef}" class="col-md-12 d-none OfferReadyToEnrolSelectListCol">
+                                    <select id="OfferReadyToEnrolSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select ProgressionInputField OfferReadyToEnrolSelectList" data-id="${students[student].studentRef}">
+                                        <option value="" hidden disabled selected>Please Select...</option>
                                     </select>
                                 </div>
                             </div>
@@ -451,39 +462,66 @@ function listLoadedCourseToFunctions() {
             let selectList = ".OfferTypeSelectList";
             populateDropDown(system, progressionYear, domain, selectList);
 
-            domain = "APPLICATION_Condition";
+            domain = "APPLICATION_CONDITION";
             selectList = ".OfferConditionSelectList";
             populateDropDown(system, progressionYear, domain, selectList);
+
+            domain = "READY_TO_ENROL_OPTIONS";
+            selectList = ".OfferReadyToEnrolSelectList";
+            populateDropDown(system, progressionYear, domain, selectList);
+
+            //Check input as fields are changed
+            $(".ProgressionInputField").change(function (event) {
+                let studentRef = $(this).attr("data-id");
+                let offerType = $("#OfferTypeSelectList-" + studentRef).val();
+                let offerCondition = $("#OfferConditionSelectList-" + studentRef).val();
+                let readyToEnrol = $("#OfferReadyToEnrol-" + studentRef).prop('checked');
+                let readyToEnrolOption = $("#OfferReadyToEnrolSelectList-" + studentRef).val();
+
+                //Check if input is valid for all learners
+                checkOfferDetails();
+
+                //Update details for student
+                recordOfferJson(studentRef, offerType, offerCondition, readyToEnrol, readyToEnrolOption);
+            });
 
             $(".OfferTypeSelectList").change(function (event) {
                 let studentRef = $(this).attr("data-id");
                 let offerType = $(this).val();
-                let offerCondition = $("#OfferConditionSelectList-" + studentRef).val();
 
                 if (offerType === "2") {
                     $("#OfferConditionSelectListCol-" + studentRef).removeClass("d-none");
                 }
+                else if (offerType > "0") {
+                    $("#OfferConditionSelectListCol-" + studentRef).addClass("d-none");
+                    $("#OfferConditionSelectList-" + studentRef).val("");
+                    $("#OfferReadyToEnrolCol-" + studentRef).removeClass("d-none");
+                }
                 else {
                     $("#OfferConditionSelectListCol-" + studentRef).addClass("d-none");
+                    $("#OfferConditionSelectList-" + studentRef).val("");
+                    $("#OfferReadyToEnrolCol-" + studentRef).addClass("d-none");
                 }
-
-                //Check if input is valid for all learners
-                checkOfferDetails();
-
-                //Update details for student
-                recordOfferJson(studentRef, offerType, offerCondition);
             });
 
             $(".OfferConditionSelectList").change(function (event) {
                 let studentRef = $(this).attr("data-id");
-                let offerType = $("#OfferTypeSelectList-" + studentRef).val();
                 let offerCondition = $(this).val();
+                $("#OfferReadyToEnrolCol-" + studentRef).removeClass("d-none");
+            });
 
-                //Check if input is valid for all learners
-                checkOfferDetails();
+            $(".OfferReadyToEnrol").change(function (event) {
+                let studentRef = $(this).attr("data-id");
+                let readyToEnrol = $(this).prop('checked');
+                let readyToEnrolOption = $("#OfferReadyToEnrolSelectList-" + studentRef).val();
 
-                //Update details for student
-                recordOfferJson(studentRef, offerType, offerCondition);
+                if (readyToEnrol === true) {
+                    $("#OfferReadyToEnrolSelectListCol-" + studentRef).removeClass("d-none");
+                }
+                else {
+                    $("#OfferReadyToEnrolSelectListCol-" + studentRef).addClass("d-none");
+                    $("#OfferReadyToEnrolSelectList-" + studentRef).val("");
+                }
             });
 
             //Scroll down page
@@ -504,18 +542,22 @@ function checkOfferDetails() {
         let thisStudentRef = $(this).attr("data-id");
         let thisOfferTypeVal = $(this).val();
         let thisOfferConditionVal = $("#OfferConditionSelectList-" + thisStudentRef).val();
+        let thisReadyToEnrolFld = $("#OfferReadyToEnrol-" + thisStudentRef);
+        let thisReadyToEnrolVal = thisReadyToEnrolFld.prop('checked');
+        let thisReadyToEnrolOptionFld = $("#OfferReadyToEnrolSelectList-" + thisStudentRef);
+        let thisReadyToEnrolOptionVal = thisReadyToEnrolOptionFld.val();
 
-        if (thisOfferTypeVal === "1") {
-            recordsOk += 1;
+        if (thisOfferTypeVal === null) {
+            recordsErr += 1;
         }
-        else if (thisOfferTypeVal === "2" && thisOfferConditionVal !== null) {
-            recordsOk += 1;
+        else if (thisOfferTypeVal === "2" && thisOfferConditionVal === null) {
+            recordsErr += 1;
         }
-        else if (thisOfferTypeVal === null) {
+        else if (thisReadyToEnrolVal === true && thisReadyToEnrolOptionVal === null) {
             recordsErr += 1;
         }
         else {
-            recordsErr += 1;
+            recordsOk += 1;
         }
     });
 
@@ -720,10 +762,20 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                                         <input type="checkbox" id="RecordDestination-${students[student].studentRef}" class="custom-control-input RecordDestination" data-id="${students[student].studentRef}" />
                                         <label class="custom-control-label" for="RecordDestination-${students[student].studentRef}">Record Destination</label>
                                     </div>
-                                    <select id="DestinationOptionsSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select d-none DestinationOptionsSelectList" data-id="${students[student].studentRef}">
-                                        <option value="" hidden disabled selected>Please select...</option>
-                                    </select>
+                                    <div class="row">
+                                        <div class="col-md">
+                                            <select id="DestinationOptionsSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select d-none DestinationOptionsSelectList" data-id="${students[student].studentRef}">
+                                                <option value="" hidden disabled selected>Please select...</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md">
+                                            <select id="DestinationIntendedActualSelectList-${students[student].studentRef}" class="form-control form-control-sm custom-select d-none DestinationIntendedActualSelectList" data-id="${students[student].studentRef}">
+                                                <option value="" hidden disabled selected>Please select...</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                     <input type="hidden" id="DestinationOptionsExistingID-${students[student].studentRef}" value="${students[student].destinationCode}" />
+                                    <input type="hidden" id="DestinationIntendedActualExistingID-${students[student].studentRef}" value="${students[student].destinationIsActual}" />
                                 </div>
                             </td>
                         </tr>`;
@@ -810,25 +862,30 @@ function listLoadedStudentFunctions() {
         let studentRef = $(this).attr("data-id");
         let notProgressing = $(this).prop("checked");
         let destinationSelectList = $("#DestinationOptionsSelectList-" + studentRef);
+        let destinationIntendedActualSelectList = $("#DestinationIntendedActualSelectList-" + studentRef);
         let destinationCode = destinationSelectList.val();
         let destinationName = destinationSelectList.children("option:selected").text();
+        let isActualDestination = destinationIntendedActualSelectList.val();
 
         if (notProgressing === true) {
             destinationSelectList.removeClass("d-none");
+            destinationIntendedActualSelectList.removeClass("d-none");
 
             //No longer saving to DB on change
             //recordDestination(system, progressionYear, studentRef, destinationCode);
-            recordDestinationJson(studentRef, destinationCode, destinationName);
+            recordDestinationJson(studentRef, destinationCode, destinationName, isActualDestination);
         }
         else {
             //If progressing then do not record a destination and remove any recorded today by the system
             destinationSelectList.addClass("d-none");
             destinationSelectList.val(null);
+            destinationIntendedActualSelectList.addClass("d-none");
+            destinationIntendedActualSelectList.val(null);
 
             //No longer saving to DB on change
-            recordDestinationJson(studentRef, null, null);
+            recordDestinationJson(studentRef, null, null, null);
             var antiForgeryTokenID = $("#AntiForgeryTokenID").val();
-            saveDestination(system, progressionYear, studentRef, null, null, "Y", antiForgeryTokenID);
+            saveDestination(system, progressionYear, studentRef, null, null, null, "Y", antiForgeryTokenID);
         }
     });
 
@@ -840,19 +897,49 @@ function listLoadedStudentFunctions() {
         let studentRef = $(this).attr("data-id");
         let destinationCode = $(this).val();
         let destinationName = $(this).children("option:selected").text();
+        let isActualDestinationFld = $(this).parent().parent().find(".DestinationIntendedActualSelectList");
+        let isActualDestinationVal = isActualDestinationFld.val();
+
+        //If intended/actual not set then set to intended
+        if (isActualDestinationVal === null) {
+            isActualDestinationVal = 0;
+            isActualDestinationFld.val(isActualDestinationVal);
+        }
+        //No longer saving to DB on change
+        //recordDestination(system, progressionYear, studentRef, destinationCode);
+
+        recordDestinationJson(studentRef, destinationCode, destinationName, isActualDestinationVal);
+    });
+
+    $(".DestinationIntendedActualSelectList").change(function (event) {
+        let system = $("#SystemID").val();
+        let academicYear = $("#AcademicYearID").val();
+        let progressionYear = $("#ProgressionYearID").val();
+        let studentRef = $(this).attr("data-id");
+        let destinationCode = $(this).parent().parent().find(".DestinationOptionsSelectList").val();
+        let destinationName = $(this).parent().parent().find(".DestinationOptionsSelectList").children("option:selected").text();
+        let isActualDestination = $(this).val();
 
         //No longer saving to DB on change
         //recordDestination(system, progressionYear, studentRef, destinationCode);
 
-        recordDestinationJson(studentRef, destinationCode, destinationName);
+        recordDestinationJson(studentRef, destinationCode, destinationName, isActualDestination);
     });
-    let domain = "DESTINATION";
-    let selectList = ".DestinationOptionsSelectList";
+
+    let domain = null;
+    let selectList = null;
+
+    domain = "DESTINATION";
+    selectList = ".DestinationOptionsSelectList";
     populateDropDown(system, progressionYear, domain, selectList)
         .then(function (value) {
-            setExistingDestinations();
+            domain = "DESTINATION_INTENDED_ACTUAL";
+            selectList = ".DestinationIntendedActualSelectList";
+            populateDropDown(system, progressionYear, domain, selectList)
+                .then(function (value) {
+                    setExistingDestinations();
+                });
         });
-    //setExistingDestinations();
 }
 
 function populateDropDown(system, academicYear, domain, selectList) {
@@ -898,17 +985,22 @@ function populateDropDown(system, academicYear, domain, selectList) {
 function setExistingDestinations() {
     //If a destination was previously recorded ensure it is set here
     let studentRef = null;
-    let selectedDestination = null;
-    $(".DestinationOptionsSelectList").each(function (index, value) {
-        let dropDown = $(this);
-        studentRef = dropDown.attr("data-id");
-        selectedDestination = $("#DestinationOptionsExistingID-" + studentRef).val();
-        if (selectedDestination !== "null") {
-            dropDown.val(selectedDestination);
+    let existingDestination = null;
+    let isActualDestination = null;
+    var destinationSelect = document.querySelectorAll('.DestinationOptionsSelectList');
 
-            let destinationSelectList = $("#DestinationOptionsSelectList-" + studentRef);
-            $("#RecordDestination-" + studentRef).prop("checked", true);
-            destinationSelectList.removeClass("d-none");
+    destinationSelect.forEach(function (select) {
+        studentRef = select.dataset.id;
+        existingDestination = document.getElementById("DestinationOptionsExistingID-" + studentRef).value;
+        existingIntendedActual = document.getElementById("DestinationIntendedActualExistingID-" + studentRef).value;
+        isActualDestinationFld = document.getElementById("DestinationOptionsExistingID-" + studentRef).parentElement.parentElement.getElementsByClassName("DestinationIntendedActualSelectList")[0];
+
+        if (existingDestination !== "null") {
+            select.value = existingDestination;
+            isActualDestinationFld.value = existingIntendedActual;
+            document.getElementById("RecordDestination-" + studentRef).checked = true;
+            select.classList.remove("d-none");
+            isActualDestinationFld.classList.remove("d-none");
         }
     });
 }
@@ -919,13 +1011,17 @@ function clearDestinationSelections(studentRef) {
         $("#RecordDestination-" + studentRef).trigger("change");
         $("#DestinationOptionsSelectList-" + studentRef).val(null);
         $("#DestinationOptionsSelectList-" + studentRef).addClass("d-none");
+        $("#DestinationIntendedActualSelectList-" + studentRef).val(null);
+        $("#DestinationIntendedActualSelectList-" + studentRef).addClass("d-none");
         $(".DestinationOptions-" + studentRef).removeClass("d-none");
     }
     else {
         $(".RecordDestination").prop("checked", false);
         $(".DestinationOptionsSelectList").val(null);
-        $(".DestinationOptions").addClass("d-none");
         $(".DestinationOptionsSelectList").addClass("d-none");
+        $(".DestinationIntendedActualSelectList").val(null);
+        $(".DestinationIntendedActualSelectList").addClass("d-none");
+        $(".DestinationOptions").addClass("d-none");
     }
 }
 
@@ -954,7 +1050,7 @@ function recordProgressionJson(studentRef, progressStudent) {
     }
 }
 
-function recordDestinationJson(studentRef, destinationCode, destinationName) {
+function recordDestinationJson(studentRef, destinationCode, destinationName, destinationIsActual) {
     /*Loads student list, updates with destination 
      * and saves list back to storage*/
     let students = JSON.parse(localStorage.getItem("students"));
@@ -963,9 +1059,10 @@ function recordDestinationJson(studentRef, destinationCode, destinationName) {
         for (let student in students) {
             if (students[student].studentRef === studentRef) {
                 //Only update destination if different
-                if (students[student].destinationCode !== destinationCode) {
+                if (students[student].destinationCode !== destinationCode || students[student].destinationIsActual !== destinationIsActual) {
                     students[student].destinationCode = destinationCode;
                     students[student].destinationName = destinationName;
+                    students[student].destinationIsActual = destinationIsActual
                     students[student].destinationChanged = true;
 
                     //As null destinations are saved straight away only enable button if not null
@@ -989,7 +1086,7 @@ function recordDestinationJson(studentRef, destinationCode, destinationName) {
     }
 }
 
-function recordOfferJson(studentRef, offerType, offerCondition) {
+function recordOfferJson(studentRef, offerType, offerCondition, readyToEnrol, readyToEnrolOption) {
     /*Loads student list, updates with destination 
      * and saves list back to storage*/
     let students = JSON.parse(localStorage.getItem("students"));
@@ -998,9 +1095,16 @@ function recordOfferJson(studentRef, offerType, offerCondition) {
         for (let student in students) {
             if (students[student].studentRef === studentRef) {
                 //Only update destination if different
-                if (students[student].offerType !== offerType || students[student].offerCondition !== offerCondition) {
+                if (
+                    students[student].offerType !== offerType
+                    || students[student].offerCondition !== offerCondition
+                    || students[student].readyToEnrol !== readyToEnrol
+                    || students[student].readyToEnrolOption !== readyToEnrolOption
+                ) {
                     students[student].offerType = offerType;
                     students[student].offerCondition = offerCondition;
+                    students[student].readyToEnrol = readyToEnrol;
+                    students[student].readyToEnrolOption = readyToEnrolOption;
                 }
             }
         }

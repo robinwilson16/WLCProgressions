@@ -55,6 +55,28 @@ BEGIN
 		ORDER BY
 			DES.Description,
 			DES.Code';
+	ELSE IF @Domain = 'DESTINATION_INTENDED_ACTUAL'
+        SET @SQLString = 
+        N'SELECT
+			Code = ''0'',
+			Description = ''Intended''
+
+		UNION ALL
+
+		SELECT
+			Code = ''1'',
+			Description = ''Actual''';
+	ELSE IF @Domain = 'READY_TO_ENROL_OPTIONS'
+        SET @SQLString = 
+        N'SELECT
+			Code = ''DIRECT'',
+			Description = ''Direct Enrol''
+
+		UNION ALL
+
+		SELECT
+			Code = ''APPROVAL'',
+			Description = ''Requires Approval to Enrol''';
 	ELSE
         SET @SQLString = 
         N'SELECT

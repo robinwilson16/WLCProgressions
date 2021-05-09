@@ -28,8 +28,17 @@ namespace WLCProgressions.Pages.Students
         [BindProperty]
         public Progression Progression { get; set; }
 
-        public IActionResult OnGet(string system, string studentRef, string academicYear, int courseFromID, int? groupFromID, int courseToID, int? groupToID, string progressionType, int offerTypeID, int? offerConditionID)
+        public string SystemID { get; set; }
+        public string SystemILPID { get; set; }
+        public string UserDetails { get; set; }
+
+        public async Task<IActionResult> OnGetAsync(string system, string studentRef, string academicYear, int courseFromID, int? groupFromID, int courseToID, int? groupToID, string progressionType, int offerTypeID, int? offerConditionID, string readyToEnrolOption)
         {
+            string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
+
+            SystemID = systemDB;
+            SystemILPID = "";
+
             Progression = new Progression
             {
                 SystemDatabase = system,
@@ -41,14 +50,18 @@ namespace WLCProgressions.Pages.Students
                 GroupToID = groupToID,
                 ProgressionType = progressionType,
                 OfferTypeID = offerTypeID,
-                OfferConditionID = offerConditionID
+                OfferConditionID = offerConditionID,
+                ReadyToEnrolOption = readyToEnrolOption
             };
             if (studentRef == null || courseFromID <= 0 || courseToID <= 0 || offerTypeID <= 0)
             {
                 return NotFound();
             }
 
-            return new JsonResult(Progression);
+            UserDetails = await Identity.GetFullName(system, academicYear, User.Identity.Name.Split('\\').Last(), _context, _configuration);
+
+            //return new JsonResult(Progression);
+            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -65,7 +78,7 @@ namespace WLCProgressions.Pages.Students
                 //await _context.SaveChangesAsync();
                 string systemDB = DatabaseSelector.GetDatabase(_configuration, Progression.SystemDatabase);
                 await _context.Database
-                    .ExecuteSqlInterpolatedAsync($"EXEC SPR_PRG_SaveProgression @System={systemDB}, @AcademicYear={Progression.AcademicYear}, @StudentRef={Progression.StudentRef}, @CourseFromID={Progression.CourseFromID}, @GroupFromID={Progression.GroupFromID}, @CourseToID={Progression.CourseToID}, @GroupToID={Progression.GroupToID}, @ProgressionType={Progression.ProgressionType}, @OfferTypeID={Progression.OfferTypeID}, @OfferConditionID={Progression.OfferConditionID}, @Username={User.Identity.Name.Split('\\').Last()}");
+                    .ExecuteSqlInterpolatedAsync($"EXEC SPR_PRG_SaveProgression @System={systemDB}, @AcademicYear={Progression.AcademicYear}, @StudentRef={Progression.StudentRef}, @CourseFromID={Progression.CourseFromID}, @GroupFromID={Progression.GroupFromID}, @CourseToID={Progression.CourseToID}, @GroupToID={Progression.GroupToID}, @ProgressionType={Progression.ProgressionType}, @OfferTypeID={Progression.OfferTypeID}, @OfferConditionID={Progression.OfferConditionID}, @ReadyToEnrolOption={Progression.ReadyToEnrolOption}, @Username={User.Identity.Name.Split('\\').Last()}");
             }
             catch (DbUpdateConcurrencyException)
             {

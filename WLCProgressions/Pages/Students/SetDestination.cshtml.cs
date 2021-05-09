@@ -68,7 +68,7 @@ namespace WLCProgressions.Pages.Students
                 string systemDB = DatabaseSelector.GetDatabase(_configuration, system);
 
                 await _context.Database
-                    .ExecuteSqlInterpolatedAsync($"EXEC SPR_PRG_UpdateDestination @System={systemDB}, @AcademicYear={Student.AcademicYear}, @StudentRef={Student.StudentRef}, @Destination={Student.DestinationCode}, @Username={User.Identity.Name.Split('\\').Last()}");
+                    .ExecuteSqlInterpolatedAsync($"EXEC SPR_PRG_UpdateDestination @System={systemDB}, @AcademicYear={Student.AcademicYear}, @StudentRef={Student.StudentRef}, @Destination={Student.DestinationCode}, @DestinationIsActual={Student.DestinationIsActual}, @Username={User.Identity.Name.Split('\\').Last()}");
 
                 result = "{ saved: \"Y\", error: \"\" }";
             }

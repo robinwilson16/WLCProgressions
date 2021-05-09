@@ -42,7 +42,11 @@
     font-size: 0.8em;
 }
 
-.DestinationOptionsSelectList {
+.DestinationOptionsSelectList,
+.DestinationIntendedActualSelectList,
+.OfferTypeSelectList,
+.OfferConditionSelectList,
+.OfferReadyToEnrolSelectList {
     font-size: 0.94em;
     max-width: 200px;
 }

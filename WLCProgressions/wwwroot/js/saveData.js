@@ -8,6 +8,7 @@
     var destinationChanged = false;
     var destinationCode = null;
     var destinationName = null;
+    var isActualDestination = null;
 
     for (let student in students) {
         numStudents += 1;
@@ -15,6 +16,7 @@
         studentRef = students[student].studentRef;
         destinationCode = students[student].destinationCode;
         destinationName = students[student].destinationName;
+        destinationIsActual = students[student].destinationIsActual;
         destinationChanged = students[student].destinationChanged;
 
         if (studentRef <= "0") {
@@ -27,7 +29,7 @@
         else {
             numStudentsDestinationChanged += 1;
 
-            var result = await saveDestination(system, academicYear, studentRef, destinationCode, destinationName, destinationChanged, antiForgeryTokenID);
+            var result = await saveDestination(system, academicYear, studentRef, destinationCode, destinationName, destinationIsActual, destinationChanged, antiForgeryTokenID);
             numSaved += result;
         }
     }
@@ -49,7 +51,7 @@
     }
 }
 
-function saveDestination(system, academicYear, studentRef, destinationCode, destinationName, destinationChanged, antiForgeryTokenID) {
+function saveDestination(system, academicYear, studentRef, destinationCode, destinationName, destinationIsActual, destinationChanged, antiForgeryTokenID) {
     return new Promise(resolve => {
         let numSaved = 0;
         let numErrors = 0;
@@ -74,6 +76,7 @@ function saveDestination(system, academicYear, studentRef, destinationCode, dest
                 'Student.AcademicYear': academicYear,
                 'Student.StudentRef': studentRef,
                 'Student.DestinationCode': destinationCode,
+                'Student.DestinationIsActual': destinationIsActual,
                 '__RequestVerificationToken': antiForgeryTokenID
             },
             success: function (data) {
@@ -114,6 +117,8 @@ async function saveProgressions(system, academicYear, students, courseFromID, gr
         progressLearner = students[student].progressLearner;
         offerTypeID = students[student].offerType;
         offerConditionID = students[student].offerCondition;
+        readyToEnrol = students[student].readyToEnrol;
+        readyToEnrolOption = students[student].readyToEnrolOption;
 
         if (studentRef <= "0") {
             console.log(`Error saving progression for student ${studentRef} to course ${courseToID}, group ${groupToID} in ${system} system`);
@@ -126,7 +131,7 @@ async function saveProgressions(system, academicYear, students, courseFromID, gr
             numProgressedStudents += 1;
             let result;
             
-            let hasAlreadyApplied = await hasStudentAlreadyApplied(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, antiForgeryTokenID);
+            let hasAlreadyApplied = await hasStudentAlreadyApplied(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, readyToEnrol, readyToEnrolOption, antiForgeryTokenID);
 
             if (hasAlreadyApplied === 1) {
                 alreadyProgressedStudents.push(studentRef);
@@ -134,7 +139,7 @@ async function saveProgressions(system, academicYear, students, courseFromID, gr
             }
             else {
                 //Only attempt to save progression if student has not already been progressed to this course
-                result = await saveProgression(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, antiForgeryTokenID);
+                result = await saveProgression(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, readyToEnrol, readyToEnrolOption, antiForgeryTokenID);
                 numSaved += result;
             }
         }
@@ -231,7 +236,7 @@ async function saveProgressions(system, academicYear, students, courseFromID, gr
     }
 }
 
-function hasStudentAlreadyApplied(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, antiForgeryTokenID) {
+function hasStudentAlreadyApplied(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, readyToEnrol, readyToEnrolOption, antiForgeryTokenID) {
     return new Promise(resolve => {
         let dataToLoad = "";
 
@@ -265,7 +270,7 @@ function hasStudentAlreadyApplied(system, academicYear, studentRef, courseFromID
     });
 }
 
-function saveProgression(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, antiForgeryTokenID) {
+function saveProgression(system, academicYear, studentRef, courseFromID, groupFromID, courseToID, groupToID, progressionType, offerTypeID, offerConditionID, readyToEnrol, readyToEnrolOption, antiForgeryTokenID) {
     return new Promise(resolve => {
         let numSaved = 0;
         let numErrors = 0;
@@ -296,6 +301,7 @@ function saveProgression(system, academicYear, studentRef, courseFromID, groupFr
                 'Progression.ProgressionType': progressionType,
                 'Progression.OfferTypeID': offerTypeID,
                 'Progression.OfferConditionID': offerConditionID,
+                'Progression.ReadyToEnrolOption': readyToEnrolOption,
                 '__RequestVerificationToken': antiForgeryTokenID
             },
             success: function (data) {

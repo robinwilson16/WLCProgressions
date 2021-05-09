@@ -335,42 +335,52 @@ $(".SaveProgressionButton").click(function (event) {
 
         let recordsOk = 0;
         let recordsErr = 0;
+
         $(".OfferTypeSelectList").each(function (event) {
             let thisStudentRef = $(this).attr("data-id");
-            let thisOfferType = $(this);
-            let thisOfferCondition = $("#OfferConditionSelectList-" + thisStudentRef);
+            let thisOfferTypeFld = $(this);
             let thisOfferTypeVal = $(this).val();
-            let thisOfferConditionVal = $("#OfferConditionSelectList-" + thisStudentRef).val();
+            let thisOfferConditionFld = $("#OfferConditionSelectList-" + thisStudentRef);
+            let thisOfferConditionVal = thisOfferConditionFld.val();
+            let thisReadyToEnrolFld = $("#OfferReadyToEnrol-" + thisStudentRef);
+            let thisReadyToEnrolVal = thisReadyToEnrolFld.prop('checked');
+            let thisReadyToEnrolOptionFld = $("#OfferReadyToEnrolSelectList-" + thisStudentRef);
+            let thisReadyToEnrolOptionVal = thisReadyToEnrolOptionFld.val();
 
-            if (thisOfferTypeVal === "1") {
-                recordsOk += 1;
-                thisOfferType.removeClass("InputError");
-                thisOfferCondition.removeClass("InputError");
-            }
-            else if (thisOfferTypeVal === "2" && thisOfferConditionVal !== null) {
-                recordsOk += 1;
-                thisOfferType.removeClass("InputError");
-                thisOfferCondition.removeClass("InputError");
-            }
-            else if (thisOfferTypeVal === null) {
+            if (thisOfferTypeVal === null) {
                 recordsErr += 1;
-                thisOfferType.addClass("InputError");
-                thisOfferCondition.addClass("InputError");
+                thisOfferTypeFld.addClass("InputError");
+                thisOfferConditionFld.addClass("InputError");
 
                 errors += `
                     <li>
                         Offer type for learner "${thisStudentRef}" not selected.
                     </li>`;
             }
-            else {
+            else if (thisOfferTypeVal === "2" && thisOfferConditionVal === null) {
                 errors += `
                     <li>
                         Offer type for learner "${thisStudentRef}" is conditional but no condition selected.
                     </li>`;
 
                 recordsErr += 1;
-                thisOfferType.addClass("InputError");
-                thisOfferCondition.addClass("InputError");
+                thisOfferTypeFld.addClass("InputError");
+                thisOfferConditionFld.addClass("InputError");
+            }
+            else if (thisReadyToEnrolVal === true && thisReadyToEnrolOptionVal === null) {
+                errors += `
+                    <li>
+                        Offer for learner "${thisStudentRef}" is marked as ready to enrol but no ready to enrol option has been selected
+                    </li>`;
+
+                recordsErr += 1;
+                thisReadyToEnrolOptionFld.addClass("InputError");
+            }
+            else {
+                recordsOk += 1;
+                thisOfferTypeFld.removeClass("InputError");
+                thisOfferConditionFld.removeClass("InputError");
+                thisReadyToEnrolOptionFld.removeClass("InputError");
             }
         });
 
