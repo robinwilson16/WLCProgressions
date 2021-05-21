@@ -6,7 +6,8 @@ CREATE PROCEDURE [dbo].[SPR_PRG_GetCourseGroupList]
     @CourseSearch NVARCHAR(255)
 AS
 BEGIN
-	SET NOCOUNT ON;
+	SET XACT_ABORT, NOCOUNT ON;
+	SET DATEFORMAT ymd
 	
 	--DECLARE @System NVARCHAR(20) = 'ProSolution'
 	--DECLARE @AcademicYear NVARCHAR(5) = '18/19'
@@ -203,7 +204,7 @@ BEGIN
 					ON DES.LocalDestinationID = OC.LocalDestinationID
 				WHERE
 					OC.ReturnYearID >= @AcademicYear
-					AND OC.CreatedDate >= ''20'' + RIGHT ( @AcademicYear, 2 ) + ''-06-01''
+					AND OC.CreatedDate >= ''20'' + RIGHT ( @AcademicYear, 2 ) + ''-04-01''
 					AND OC.EndDate IS NULL
 				GROUP BY
 					OC.StudentID

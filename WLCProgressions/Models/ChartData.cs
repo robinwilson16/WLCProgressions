@@ -27,6 +27,12 @@ namespace WLCProgressions.Models
         public string AcademicYear { get; set; }
 
         [StringLength(12)]
+        public string CollegeCode { get; set; }
+
+        [StringLength(150)]
+        public string CollegeName { get; set; }
+
+        [StringLength(12)]
         public string FacCode { get; set; }
 
         [StringLength(150)]

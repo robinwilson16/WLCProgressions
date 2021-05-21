@@ -607,6 +607,11 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                 <table id="EnrolmentList" class="table table-sm table-hover">
                     <thead>
                         <tr>
+                            <th scope="col" colspan="11" class="alert alert-primary">
+                                <h5 class="alert-heading">${students[0].collegeCode} <i class="fas fa-chevron-right"></i> ${students[0].facCode} <i class="fas fa-chevron-right"></i> ${students[0].teamCode} <i class="fas fa-chevron-right"></i> <i class="fas fa-graduation-cap"></i> ${students[0].courseCode} - ${students[0].courseTitle}</h5>
+                            </th>
+                        </tr>
+                        <tr>
                             <th scope="col" class="THSmall">Student<br />Ref</th>                                
                             <th scope="col" class="THSmall">Surname</th>
                             <th scope="col" class="THSmall">Forename</th>

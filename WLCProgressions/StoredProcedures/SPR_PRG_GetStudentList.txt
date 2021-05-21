@@ -33,6 +33,16 @@ BEGIN
     N'SELECT
 		SystemDatabase = @System,
         AcademicYear = SD.AcademicYearID,
+		CollegeCode = RTRIM ( CGRP.Code ),
+		CollegeName = CGRP.Name,
+		SiteCode = STE.Code,
+		SiteName = STE.Description,
+		FacCode = RTRIM ( FAC.Code ),
+		FacName = FAC.Name,
+		TeamCode = RTRIM ( TEAM.Code ),
+		TeamName = TEAM.Name,
+		CourseCode = CRS.Code,
+		CourseTitle = CRS.Name,
         StudentRef = RTRIM ( SD.RefNo ),
 		Surname = SD.Surname,
 		Forename = SD.FirstForename,
@@ -72,10 +82,18 @@ BEGIN
 	FROM ' + @System + '.dbo.StudentDetail SD
 	INNER JOIN ' + @System + '.dbo.Enrolment ENR
 		ON ENR.StudentDetailID = SD.StudentDetailID
-	INNER JOIN ' + @System + '.dbo.CompletionStatus CMP
-		ON CMP.CompletionStatusID = ENR.CompletionStatusID
     INNER JOIN ' + @System + '.dbo.Offering CRS
         ON CRS.OfferingID = ENR.OfferingID
+	INNER JOIN ' + @System + '.dbo.CompletionStatus CMP
+		ON CMP.CompletionStatusID = ENR.CompletionStatusID
+	INNER JOIN ' + @System + '.dbo.Site STE
+		ON STE.SiteID = CRS.SiteID
+	INNER JOIN ' + @System + '.dbo.CollegeLevel TEAM
+		ON TEAM.SID = CRS.SID
+	INNER JOIN ' + @System + '.dbo.CollegeLevel FAC
+		ON FAC.SID = TEAM.ParentSID
+	INNER JOIN ' + @System + '.dbo.CollegeLevel CGRP
+		ON CGRP.SID = FAC.ParentSID
     LEFT JOIN (
         SELECT
             OC.StudentID,

@@ -112,8 +112,8 @@ var options = {
             let xValue = this.data.labels[itemID];
             let yValue = this.data.datasets[0].data[itemID];
 
-            if (level > 4) {
-                level = 4;
+            if (level > 5) {
+                level = 5;
                 chartElementClickedToTable(level, xValue, yValue);
             }
             else {
@@ -279,9 +279,10 @@ function resizeChart(displayType, data) {
 function buildBreadcrumb(data) {
     let level = data.chartData[0].level;
     let level1Code = data.chartData[0].academicYear;
-    let level2Code = data.chartData[0].facCode;
-    let level3Code = data.chartData[0].teamCode;
-    let level4Code = data.chartData[0].courseCode;
+    let level2Code = data.chartData[0].collegeCode;
+    let level3Code = data.chartData[0].facCode;
+    let level4Code = data.chartData[0].teamCode;
+    let level5Code = data.chartData[0].courseCode;
 
     let bCrumb = ``;
 
@@ -303,6 +304,11 @@ function buildBreadcrumb(data) {
     if (level >= 5 && level4Code !== null) {
         bCrumb += `
              <i class="fas fa-chevron-right"></i> <a href="#" class="BreadCrumb" aria-level="4">${level4Code}</a>`;
+    }
+
+    if (level >= 6 && level5Code !== null) {
+        bCrumb += `
+             <i class="fas fa-chevron-right"></i> <a href="#" class="BreadCrumb" aria-level="5">${level5Code}</a>`;
     }
 
     $("#BreadcrumbBar").html(bCrumb);
@@ -419,20 +425,34 @@ function doLoadTables(level, drill, displayType, measureMethod, data) {
         if (drillLevel === 2) {
             numCols += 2;
             drillColumns += `
-                <th scope="col" class="text-left">Faculty Code</th>
-                <th scope="col" class="text-left">Faculty Name</th>`;
+                <th scope="col" class="text-left">College Code</th>
+                <th scope="col" class="text-left">College Name</th>`;
         }
         else if (drillLevel === 3) {
             numCols += 4;
             drillColumns += `
+                <th scope="col" class="text-left">College Code</th>
+                <th scope="col" class="text-left">College Name</th>
                 <th scope="col" class="text-left">Faculty Code</th>
-                <th scope="col" class="text-left">Faculty Name</th>
-                <th scope="col" class="text-left">Team Code</th>
-                <th scope="col" class="text-left">Team Name</th>`;
+                <th scope="col" class="text-left">Faculty Name</th>`;
         }
         else if (drillLevel === 4) {
             numCols += 6;
             drillColumns += `
+                <th scope="col" class="text-left">College Code</th>
+                <th scope="col" class="text-left">College Name</th>
+                <th scope="col" class="text-left">Faculty Code</th>
+                <th scope="col" class="text-left">Faculty Name</th>
+                <th scope="col" class="text-left">Team Code</th>
+                <th scope="col" class="text-left">Team Name</th>`;
+
+            buttonColumns += `
+                <th scope="col">&nbsp;</th>`;
+        }
+        else if (drillLevel === 5) {
+            numCols += 6;
+            drillColumns += `
+                <th scope="col" class="text-left">College Code</th>
                 <th scope="col" class="text-left">Fac Code</th>
                 <th scope="col" class="text-left">Team Code</th>              
                 <th scope="col" class="text-left">Course Code</th>
@@ -470,20 +490,30 @@ function doLoadTables(level, drill, displayType, measureMethod, data) {
 
             if (drillLevel === 2) {
                 drillRows += `
-                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facCode}</a></td>
-                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facName}</a></td>`;
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.collegeCode}" aria-describedby="3"><a href="#">${area.collegeCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.collegeCode}" aria-describedby="3"><a href="#">${area.collegeName}</a></td>`;
             }
             else if (drillLevel === 3) {
                 drillRows += `
-                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facCode}</a></td>
-                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facName}</a></td>
-                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.teamCode}" aria-describedby="4"><a href="#">${area.teamCode}</a></td>
-                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.teamCode}" aria-describedby="4"><a href="#">${area.teamName}</a></td>`;
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.collegeCode}" aria-describedby="3"><a href="#">${area.collegeCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.collegeCode}" aria-describedby="3"><a href="#">${area.collegeName}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="4"><a href="#">${area.facCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="4"><a href="#">${area.facName}</a></td>`;
             }
             else if (drillLevel === 4) {
                 drillRows += `
-                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="3"><a href="#">${area.facCode}</a></td>
-                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.teamCode}" aria-describedby="4"><a href="#">${area.teamCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.collegeCode}" aria-describedby="3"><a href="#">${area.collegeCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.collegeCode}" aria-describedby="3"><a href="#">${area.collegeName}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="4"><a href="#">${area.facCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="4"><a href="#">${area.facName}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.teamCode}" aria-describedby="5"><a href="#">${area.teamCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.teamCode}" aria-describedby="5"><a href="#">${area.teamName}</a></td>`;
+            }
+            else if (drillLevel === 5) {
+                drillRows += `
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.collegeCode}" aria-describedby="3"><a href="#">${area.collegeCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.facCode}" aria-describedby="4"><a href="#">${area.facCode}</a></td>
+                <td class="text-left DrillTable${popupTable}"${openModal} aria-label="${area.teamCode}" aria-describedby="5"><a href="#">${area.teamCode}</a></td>
                 <td class="text-left">${area.courseCode}</td>
                 <td class="text-left">${area.courseTitle}</td>
                 <td class="text-left">${area.groupCode}</td>`;

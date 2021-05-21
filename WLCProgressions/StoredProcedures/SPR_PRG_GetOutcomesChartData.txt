@@ -6,12 +6,13 @@ CREATE PROCEDURE [dbo].[SPR_PRG_GetOutcomesChartData]
 	@Drill NVARCHAR(24)
 AS
 BEGIN
-	SET NOCOUNT ON;
-	
+	SET XACT_ABORT, NOCOUNT ON;
+	SET DATEFORMAT ymd
+
 	--DECLARE @System NVARCHAR(20) = 'ProSolution'
-	--DECLARE @AcademicYear NVARCHAR(5) = '18/19'
+	--DECLARE @AcademicYear NVARCHAR(5) = '20/21'
 	--DECLARE @Measure NVARCHAR(20) = 'Outstanding'
-	--DECLARE @Level INT = 4
+	--DECLARE @Level INT = 1
 	--DECLARE @Drill NVARCHAR(24) = NULL
 	
 	DECLARE @SQLChartTitle NVARCHAR(MAX);
@@ -30,9 +31,10 @@ BEGIN
 			''Outstanding Progressions by ''
 			+ CASE
 				WHEN @Level = 1 THEN ''Year''
-				WHEN @Level = 2 THEN ''Faculty''
-				WHEN @Level = 3 THEN ''Team''
-				WHEN @Level = 4 THEN ''Course''
+				WHEN @Level = 2 THEN ''College''
+				WHEN @Level = 3 THEN ''Faculty''
+				WHEN @Level = 4 THEN ''Team''
+				WHEN @Level = 5 THEN ''Course''
 				ELSE ''Year''
 			END';
 
@@ -47,9 +49,10 @@ BEGIN
 			''Recorded Progressions by ''
 			+ CASE
 				WHEN @Level = 1 THEN ''Year''
-				WHEN @Level = 2 THEN ''Faculty''
-				WHEN @Level = 3 THEN ''Team''
-				WHEN @Level = 4 THEN ''Course''
+				WHEN @Level = 2 THEN ''College''
+				WHEN @Level = 3 THEN ''Faculty''
+				WHEN @Level = 4 THEN ''Team''
+				WHEN @Level = 5 THEN ''Course''
 				ELSE ''Year''
 			END';
 
@@ -65,18 +68,24 @@ BEGIN
 			WHEN @Level = 1 THEN CRS.AcademicYearID
 			WHEN @Level = 2 THEN
 				CASE
+					WHEN CGRP.Code IS NULL THEN ''00 - Unknown''
+					ELSE
+						RTRIM ( CGRP.Code ) + '' - '' + CGRP.Name
+				END
+			WHEN @Level = 3 THEN
+				CASE
 					WHEN FAC.Code IS NULL THEN ''00 - Unknown''
 					ELSE
 						RTRIM ( FAC.Code ) + '' - '' + FAC.Name
 				END
-			WHEN @Level = 3 THEN
+			WHEN @Level = 4 THEN
 				RTRIM ( COALESCE ( FAC.Code, ''00'' ) ) + '' - '' + 
 				+ CASE
 					WHEN TEAM.Code IS NULL THEN ''00 - Unknown''
 					ELSE
 						RTRIM ( TEAM.Code ) + '' - '' + TEAM.Name
 				END
-			WHEN @Level = 4 THEN
+			WHEN @Level = 5 THEN
 				RTRIM ( COALESCE ( FAC.Code, ''00'' ) ) + '' - '' + RTRIM ( COALESCE ( TEAM.Code, ''00'' ) ) + '' - '' 
 				+ CASE
 					WHEN CRS.Code IS NULL THEN ''00 - Unknown''
@@ -96,6 +105,8 @@ BEGIN
 		SET @AdditionalFields =
 			N'
 			AcademicYear = @AcademicYear,
+			CollegeCode = NULL,
+			CollegeName = NULL,
 			FacCode = NULL,
 			FacName = NULL,
 			TeamCode = NULL,
@@ -116,6 +127,31 @@ BEGIN
 		SET @AdditionalFields =
 			N'
 			AcademicYear = @AcademicYear,
+			CollegeCode = COALESCE ( RTRIM ( CGRP.Code ), ''00'' ),
+			CollegeName = COALESCE ( CGRP.Name, ''-- Unknown --'' ),
+			FacCode = NULL,
+			FacName = NULL,
+			TeamCode = NULL,
+			TeamName = NULL,
+			CourseID = NULL,
+			CourseCode = NULL,
+			CourseTitle = NULL,
+			GroupID = NULL,
+			GroupCode = NULL,
+			GroupName = NULL';
+
+		SET @AdditionalFieldsGroupBy =
+			N'
+			COALESCE ( RTRIM ( CGRP.Code ), ''00'' ),
+			COALESCE ( CGRP.Name, ''-- Unknown --'' )';
+	END
+	ELSE IF( COALESCE ( @Level, 1 ) = 3)
+	BEGIN
+		SET @AdditionalFields =
+			N'
+			AcademicYear = @AcademicYear,
+			CollegeCode = COALESCE ( RTRIM ( CGRP.Code ), ''00'' ),
+			CollegeName = COALESCE ( CGRP.Name, ''-- Unknown --'' ),
 			FacCode = COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
 			FacName = COALESCE ( FAC.Name, ''-- Unknown --'' ),
 			TeamCode = NULL,
@@ -129,14 +165,18 @@ BEGIN
 
 		SET @AdditionalFieldsGroupBy =
 			N'
+			COALESCE ( RTRIM ( CGRP.Code ), ''00'' ),
+			COALESCE ( CGRP.Name, ''-- Unknown --'' ),
 			COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
 			COALESCE ( FAC.Name, ''-- Unknown --'' )';
 	END
-	ELSE IF( COALESCE ( @Level, 1 ) = 3)
+	ELSE IF( COALESCE ( @Level, 1 ) = 4)
 	BEGIN
 		SET @AdditionalFields =
 			N'
 			AcademicYear = @AcademicYear,
+			CollegeCode = COALESCE ( RTRIM ( CGRP.Code ), ''00'' ),
+			CollegeName = COALESCE ( CGRP.Name, ''-- Unknown --'' ),
 			FacCode = COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
 			FacName = COALESCE ( FAC.Name, ''-- Unknown --'' ),
 			TeamCode = COALESCE ( RTRIM ( TEAM.Code ), ''00'' ),
@@ -150,6 +190,8 @@ BEGIN
 
 		SET @AdditionalFieldsGroupBy =
 			N'
+			COALESCE ( RTRIM ( CGRP.Code ), ''00'' ),
+			COALESCE ( CGRP.Name, ''-- Unknown --'' ),
 			COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
 			COALESCE ( FAC.Name, ''-- Unknown --'' ),
 			COALESCE ( RTRIM ( TEAM.Code ), ''00'' ),
@@ -162,11 +204,13 @@ BEGIN
 			AND COALESCE ( FAC.Code, ''00'' ) = @Drill';
 		END
 	END
-	ELSE IF( COALESCE ( @Level, 1 ) = 4)
+	ELSE IF( COALESCE ( @Level, 1 ) = 5)
 	BEGIN
 		SET @AdditionalFields =
 			N'
 			AcademicYear = @AcademicYear,
+			CollegeCode = COALESCE ( RTRIM ( CGRP.Code ), ''00'' ),
+			CollegeName = COALESCE ( CGRP.Name, ''-- Unknown --'' ),
 			FacCode = COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
 			FacName = COALESCE ( FAC.Name, ''-- Unknown --'' ),
 			TeamCode = COALESCE ( RTRIM ( TEAM.Code ), ''00'' ),
@@ -180,6 +224,8 @@ BEGIN
 
 		SET @AdditionalFieldsGroupBy =
 			N'
+			COALESCE ( RTRIM ( CGRP.Code ), ''00'' ),
+			COALESCE ( CGRP.Name, ''-- Unknown --'' ),
 			COALESCE ( RTRIM ( FAC.Code ), ''00'' ),
 			COALESCE ( FAC.Name, ''-- Unknown --'' ),
 			COALESCE ( RTRIM ( TEAM.Code ), ''00'' ),
@@ -225,14 +271,16 @@ BEGIN
 			ON STE.SiteID = CRS.SiteID
 		INNER JOIN ' + @System + '.dbo.CollegeLevel TEAM
 			ON TEAM.SID = CRS.SID
+		INNER JOIN ' + @System + '.dbo.CollegeLevel FAC
+			ON FAC.SID = TEAM.ParentSID
+		INNER JOIN ' + @System + '.dbo.CollegeLevel CGRP
+			ON CGRP.SID = FAC.ParentSID
 		LEFT JOIN (
 			SELECT DISTINCT
 				LNK.SubOfferingID
 			FROM ' + @System + '.dbo.LinkedOffering LNK
 		) CLD
 			ON CLD.SubOfferingID = CRS.OfferingID
-		LEFT JOIN ' + @System + '.dbo.CollegeLevel FAC
-			ON FAC.SID = TEAM.ParentSID
 		LEFT JOIN ' + @System + '.dbo.Learning_Aim AIM
 			ON AIM.LEARNING_AIM_REF = CRS.QualID
 		LEFT JOIN ' + @System + '.dbo.OfferingGroup GRP
@@ -361,7 +409,7 @@ BEGIN
 					ON DES.LocalDestinationID = OC.LocalDestinationID
 				WHERE
 					OC.ReturnYearID >= @AcademicYear
-					AND OC.CreatedDate >= ''20'' + RIGHT ( @AcademicYear, 2 ) + ''-06-01''
+					AND OC.CreatedDate >= ''20'' + RIGHT ( @AcademicYear, 2 ) + ''-04-01''
 					AND OC.EndDate IS NULL
 				GROUP BY
 					OC.StudentID

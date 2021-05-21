@@ -12,11 +12,41 @@ namespace WLCProgressions.Models
         [StringLength(20)]
         public string SystemDatabase { get; set; }
 
-        [StringLength(12)]
-        public string StudentRef { get; set; }
-
         [StringLength(5)]
         public string AcademicYear { get; set; }
+
+        [StringLength(12)]
+        public string CollegeCode { get; set; }
+
+        [StringLength(150)]
+        public string CollegeName { get; set; }
+
+        [StringLength(20)]
+        public string SiteCode { get; set; }
+
+        [StringLength(100)]
+        public string SiteName { get; set; }
+
+        [StringLength(12)]
+        public string FacCode { get; set; }
+
+        [StringLength(150)]
+        public string FacName { get; set; }
+
+        [StringLength(12)]
+        public string TeamCode { get; set; }
+
+        [StringLength(150)]
+        public string TeamName { get; set; }
+
+        [StringLength(24)]
+        public string CourseCode { get; set; }
+
+        [StringLength(255)]
+        public string CourseTitle { get; set; }
+
+        [StringLength(12)]
+        public string StudentRef { get; set; }
 
         [StringLength(40)]
         public string Surname { get; set; }
