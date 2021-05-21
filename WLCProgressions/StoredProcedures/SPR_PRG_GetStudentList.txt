@@ -62,9 +62,21 @@ BEGIN
         RiskCode = COALESCE ( RSK.RiskCode, 0 ),
         RiskName = COALESCE ( RSK.RiskName, ''Risk Not Set''),
         RiskColour = COALESCE ( RSK.RiskColour, ''Red'' ),
-		RiskCodePreCovid19 = COALESCE ( RSKC.RiskCode, 0 ),
-        RiskNamePreCovid19 = COALESCE ( RSKC.RiskName, ''Risk Not Set''),
-        RiskColourPreCovid19 = COALESCE ( RSKC.RiskColour, ''Red'' ),
+		OnTrackToAchieveCode = COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8, ''Not Set'' ),
+		OnTrackToAchieveColour = 
+			CASE
+				WHEN COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8 ) = ''R'' THEN ''Red''
+				WHEN COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8 ) = ''A'' THEN ''Orange''
+				WHEN COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8 ) = ''G'' THEN ''Green''
+				ELSE ''Red''
+			END,
+		OnTrackToAchieveTerm = 
+			CASE
+				WHEN ENR.UserDefined10 IS NOT NULL THEN ''Term 3''
+				WHEN ENR.UserDefined9 IS NOT NULL THEN ''Term 2''
+				WHEN ENR.UserDefined8 IS NOT NULL THEN ''Term 1''
+				ELSE ''None''
+			END,
 		NumAppsNextYear = COALESCE ( NYA.NumApps, 0 ),
         AppliedCoursesNextYear = NYA.Courses,
         NumEnrolsNextYear = COALESCE ( NYE.NumEnrols, 0 ),
@@ -79,6 +91,10 @@ BEGIN
 		IsReadyToEnrol = CAST ( 0 AS bit ),
 		ReadyToEnrolOption = '''',
 		HasAlreadyApplied = CAST ( 0 AS bit )
+	'
+
+    SET @SQLString += 
+        N'
 	FROM ' + @System + '.dbo.StudentDetail SD
 	INNER JOIN ' + @System + '.dbo.Enrolment ENR
 		ON ENR.StudentDetailID = SD.StudentDetailID
@@ -206,28 +222,6 @@ BEGIN
     ) RSK
         ON RSK.StudentRef = SD.RefNo
         AND RSK.CourseCode = CRS.Code
-	LEFT JOIN (
-        SELECT
-            StudentRef = S.StudentID,
-            CourseCode = CRS.CourseCode,
-            RiskCode = RSK.EnrolmentAtRiskStatus,
-            RiskName = RSKS.AtRiskStatus,
-            RiskColour = RSKS.Colour
-        FROM ' + @SystemILP + '.dbo.Student S
-        INNER JOIN PROMONITOR.wlc.dbo.LearnerInformation_AtRiskArchive RSK
-            ON RSK.PMStudentID = S.PMStudentID
-			AND RSK.ArchiveDate = ''2020-05-01 15:49:02''
-        INNER JOIN ' + @SystemILP + '.dbo.CourseAtRiskStatus RSKS
-            ON RSKS.CourseAtRiskID = RSK.EnrolmentAtRiskStatus
-        INNER JOIN ' + @SystemILP + '.dbo.Enrolment ENR
-            ON ENR.PMEnrolmentID = RSK.PMEnrolmentID
-        INNER JOIN ' + @SystemILP + '.dbo.Course CRS
-            ON CRS.CourseID = ENR.CourseID
-        WHERE
-            S.AcademicYearID = @AcademicYear
-    ) RSKC
-        ON RSKC.StudentRef = SD.RefNo
-        AND RSKC.CourseCode = CRS.Code
 	LEFT JOIN (
 		SELECT 
 			SD.AcademicYearID,

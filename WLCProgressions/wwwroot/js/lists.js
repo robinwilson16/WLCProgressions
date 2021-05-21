@@ -618,8 +618,7 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                             <th scope="col" class="THSmall">Age 31<sup>st</sup><br />Aug ${academicYear.substring(3, 5)}</th>
                             <th scope="col" class="THSmall">Completion</th>
                             <th scope="col" class="text-center THSmall">Attend %</th>
-                            <th scope="col" class="text-center THSmall">Risk<br />(Pre-Covid-19)</th>
-                            <th scope="col" class="text-center THSmall">Risk<br />(Current)</th>
+                            <th scope="col" class="text-center THSmall">On Track To Achieve</th>
                             <th scope="col" class="text-center THSmall">${progressionYear} Apps<br />and Enrols</th>
                             <th scope="col" class="text-center THSmall">Progress</th>
                             <th scope="col" class="text-center THSmall">Destination</th>
@@ -667,16 +666,11 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                     <li><strong>Category: ${attendRate}</strong></li>
                 </ul>`;
 
-                let riskSummary = `
+                let onTrackToAchieveSummary = `
                 <ul class='RiskSummary'>
-                    <li>Risk: ${students[student].riskName}</li>
-                    <li>Risk Colour: ${students[student].riskColour}</li>
-                </ul>`;
-
-                let riskSummaryPreCovid19 = `
-                <ul class='RiskSummary'>
-                    <li>Risk: ${students[student].riskNamePreCovid19}</li>
-                    <li>Risk Colour: ${students[student].riskColourPreCovid19}</li>
+                    <li>RAG: ${students[student].onTrackToAchieveCode}</li>
+                    <li>RAG Colour: ${students[student].onTrackToAchieveColour}</li>
+                    <li>RAG Term: ${students[student].onTrackToAchieveTerm}</li>
                 </ul>`;
 
                 let appsArr = null;
@@ -746,10 +740,7 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                                 </div>
                             </td>
                             <td class="text-center">
-                                <div class="RiskIndicator ${students[student].riskColourPreCovid19} LearnerPopover" data-toggle="popover" aria-describedby="${academicYear} ProMonitor pre-Covid-19 Risk Rating for ${students[student].forename} ${students[student].surname}" data-content="${riskSummaryPreCovid19}"></div>
-                            </td>
-                            <td class="text-center">
-                                <div class="RiskIndicator ${students[student].riskColour} LearnerPopover" data-toggle="popover" aria-describedby="${academicYear} ProMonitor Current Risk Rating for ${students[student].forename} ${students[student].surname}" data-content="${riskSummary}"></div>
+                                <div class="RiskIndicator ${students[student].onTrackToAchieveColour} LearnerPopover" data-toggle="popover" aria-describedby="${academicYear} RAG Rating for ${students[student].forename} ${students[student].surname}" data-content="${onTrackToAchieveSummary}"></div>
                             </td>
                             <td class="text-center">
                                 ${appsButton}

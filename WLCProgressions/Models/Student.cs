@@ -71,13 +71,16 @@ namespace WLCProgressions.Models
 
         [StringLength(20)]
         public string RiskColour { get; set; }
-        public int RiskCodePreCovid19 { get; set; }
 
-        [StringLength(25)]
-        public string RiskNamePreCovid19 { get; set; }
+        [StringLength(1)]
+        public string OnTrackToAchieveCode { get; set; }
 
         [StringLength(20)]
-        public string RiskColourPreCovid19 { get; set; }
+        public string OnTrackToAchieveColour { get; set; }
+
+        [StringLength(20)]
+        public string OnTrackToAchieveTerm { get; set; }
+
         public int ClassesPlanned { get; set; }
         public int ClassesCounted { get; set; }
         public int ClassesMarked { get; set; }
