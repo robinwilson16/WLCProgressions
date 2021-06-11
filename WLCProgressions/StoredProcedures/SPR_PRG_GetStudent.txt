@@ -32,12 +32,22 @@ BEGIN
     N'SELECT
 		SystemDatabase = @System,
         AcademicYear = SD.AcademicYearID,
+		CollegeCode = RTRIM ( CGRP.Code ),
+		CollegeName = CGRP.Name,
+		SiteCode = STE.Code,
+		SiteName = STE.Description,
+		FacCode = RTRIM ( FAC.Code ),
+		FacName = FAC.Name,
+		TeamCode = RTRIM ( TEAM.Code ),
+		TeamName = TEAM.Name,
+		CourseCode = CRS.Code,
+		CourseTitle = CRS.Name,
         StudentRef = RTRIM ( SD.RefNo ),
 		Surname = SD.Surname,
 		Forename = SD.FirstForename,
 		DOB = SD.DateOfBirth,
 		Age31stAug = CAST ( FLOOR ( DATEDIFF ( DAY, COALESCE ( SD.DateOfBirth, CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ), CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ) / 365.23076923074 ) AS int ),
-		Completion = NULL,
+		Completion = ''1'',
         ClassesPlanned = 0,
         ClassesCounted = 0,
         ClassesMarked = 0,
@@ -51,9 +61,9 @@ BEGIN
         RiskCode = 0,
         RiskName = ''No Risk'',
         RiskColour = ''Green'',
-		RiskCodePreCovid19 = 0,
-        RiskNamePreCovid19 = ''No Risk'',
-        RiskColourPreCovid19 = ''Green'',
+		OnTrackToAchieveCode = ''Not Set'',
+		OnTrackToAchieveColour = ''Green'',
+		OnTrackToAchieveTerm = ''None'',
 		NumAppsNextYear = 0,
         AppliedCoursesNextYear = '''',
         NumEnrolsNextYear = 0,
@@ -75,6 +85,16 @@ BEGIN
 				END
 			AS BIT )
 	FROM ' + @System + '.dbo.StudentDetail SD
+    INNER JOIN ' + @System + '.dbo.Offering CRS
+        ON CRS.OfferingID = @CourseID
+	INNER JOIN ' + @System + '.dbo.Site STE
+		ON STE.SiteID = CRS.SiteID
+	INNER JOIN ' + @System + '.dbo.CollegeLevel TEAM
+		ON TEAM.SID = CRS.SID
+	INNER JOIN ' + @System + '.dbo.CollegeLevel FAC
+		ON FAC.SID = TEAM.ParentSID
+	INNER JOIN ' + @System + '.dbo.CollegeLevel CGRP
+		ON CGRP.SID = FAC.ParentSID
     LEFT JOIN (
         SELECT
             OC.StudentID,
