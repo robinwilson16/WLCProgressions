@@ -59,7 +59,7 @@ var options = {
     maintainAspectRatio: false, //Do not set to true if hiding element
     xAxisID: chartDefaultLevel,
     scales: {
-        xAxes: [{
+        x: {
             ticks: {
                 min: 0,
                 max: 1,
@@ -73,8 +73,8 @@ var options = {
                 display: true,
                 color: "rgba(255,99,164,0.2)"
             }
-        }],
-        yAxes: [{
+        },
+        y: {
             ticks: {
                 min: 0,
                 beginAtZero: true,
@@ -83,7 +83,7 @@ var options = {
             gridLines: {
                 display: false
             }
-        }]
+        }
     },
     tooltips: {
         mode: 'label',
@@ -102,6 +102,7 @@ var options = {
     events: ['click'],
     onClick: function (c, i) {
         let e = i[0];
+        alert('test');
         if (typeof e !== "undefined") {
             //Ensure user did not click outside bar
             //level = this.options.xAxisID + 1;
@@ -124,15 +125,19 @@ var options = {
 };
 
 var pageChart = new Chart(pageChartCanvas, {
-    options: options,
+    options: {
+        indexAxis: 'y'
+    },
     data: chartData1,
-    type: 'horizontalBar'
+    type: 'bar'
 });
 
 var popupChart = new Chart(popupChartCanvas, {
-    options: options,
+    options: {
+        indexAxis: 'y'
+    },
     data: chartData2,
-    type: 'horizontalBar'
+    type: 'bar'
 });
 
 $(".ToggleOutstandingChart").click(function (event) {
