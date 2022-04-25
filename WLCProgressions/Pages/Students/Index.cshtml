@@ -26,7 +26,7 @@
                 @Html.DisplayNameFor(model => model.Student[0].Age31stAug)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Student[0].Completion)
+                @Html.DisplayNameFor(model => model.Student[0].CompletionStatusName)
             </th>
             <th></th>
         </tr>
@@ -48,7 +48,7 @@
                     @Html.DisplayFor(modelItem => item.Age31stAug)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.Completion)
+                    @Html.DisplayFor(modelItem => item.CompletionStatusName)
                 </td>
                 <td>
                     <a asp-page="./Edit" asp-route-id="@item.StudentRef">Edit</a> |

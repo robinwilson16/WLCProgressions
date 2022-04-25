@@ -25,7 +25,7 @@ namespace WLCProgressions.Pages.CourseGroups
 
         public IList<CourseGroup> CourseGroup { get;set; }
 
-        public async Task OnGetAsync(string system, string academicYear, bool requireEnrols, bool showOutstanding, string search)
+        public async Task OnGetAsync(string system, string academicYear, bool showCoursesWithoutEnrols, bool showOutstanding, string search)
         {
             if (String.IsNullOrEmpty(search))
             {
@@ -37,11 +37,11 @@ namespace WLCProgressions.Pages.CourseGroups
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
 
             CourseGroup = await _context.CourseGroup
-                .FromSqlInterpolated($"EXEC SPR_PRG_GetCourseGroupList @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @RequireEnrols={requireEnrols}, @ShowOutstanding={showOutstanding}, @CourseSearch={search}")
+                .FromSqlInterpolated($"EXEC SPR_PRG_GetCourseGroupList @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @ShowCoursesWithoutEnrols={showCoursesWithoutEnrols}, @ShowOutstanding={showOutstanding}, @CourseSearch={search}")
                 .ToListAsync();
         }
 
-        public async Task<IActionResult> OnGetJsonAsync(string system, string academicYear, bool requireEnrols, bool showOutstanding, string search)
+        public async Task<IActionResult> OnGetJsonAsync(string system, string academicYear, bool showCoursesWithoutEnrols, bool showOutstanding, string search)
         {
             if (String.IsNullOrEmpty(search))
             {
@@ -53,7 +53,7 @@ namespace WLCProgressions.Pages.CourseGroups
             string CurrentAcademicYear = await AcademicYearFunctions.GetAcademicYear(academicYear, _context);
 
             CourseGroup = await _context.CourseGroup
-                .FromSqlInterpolated($"EXEC SPR_PRG_GetCourseGroupList @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @RequireEnrols={requireEnrols}, @ShowOutstanding={showOutstanding}, @CourseSearch={search}")
+                .FromSqlInterpolated($"EXEC SPR_PRG_GetCourseGroupList @System={systemDB}, @AcademicYear={CurrentAcademicYear}, @ShowCoursesWithoutEnrols={showCoursesWithoutEnrols}, @ShowOutstanding={showOutstanding}, @CourseSearch={search}")
                 .ToListAsync();
 
             var collectionWrapper = new

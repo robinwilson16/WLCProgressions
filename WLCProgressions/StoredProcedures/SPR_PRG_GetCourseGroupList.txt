@@ -1,7 +1,7 @@
 CREATE PROCEDURE [dbo].[SPR_PRG_GetCourseGroupList]
 	@System NVARCHAR(20),
     @AcademicYear NVARCHAR(5),
-    @RequireEnrols BIT,
+    @ShowCoursesWithoutEnrols BIT,
 	@ShowOutstanding BIT,
     @CourseSearch NVARCHAR(255)
 AS
@@ -11,7 +11,7 @@ BEGIN
 	
 	--DECLARE @System NVARCHAR(20) = 'ProSolution'
 	--DECLARE @AcademicYear NVARCHAR(5) = '20/21'
-	--DECLARE @RequireEnrols BIT = 0
+	--DECLARE @ShowCoursesWithoutEnrols BIT = 0
 	--DECLARE @ShowOutstanding BIT = 1
 	--DECLARE @CourseSearch VARCHAR(255) = '%'--'ESOL111062'
 	
@@ -24,8 +24,8 @@ BEGIN
 			AcademicYear = CRS.AcademicYearID,
 			SiteCode = STE.Code,
 			SiteName = STE.Description,
-			FacCode = RTRIM ( FAC.Code ),
-			FacName = FAC.Name,
+			FacCode = COALESCE ( RTRIM ( FAC.Code ), ''--UNK--'' ),
+			FacName = COALESCE ( FAC.Name, ''--Unknown--'' ),
 			TeamCode = RTRIM ( TEAM.Code ),
 			TeamName = TEAM.Name,
 			CourseID = CRS.OfferingID,
@@ -237,7 +237,7 @@ BEGIN
 			AND CRS.FranchisingPartnerID IS NULL --Not a partner
 			AND 
 				CASE
-					WHEN @RequireEnrols = 0 THEN 1
+					WHEN @ShowCoursesWithoutEnrols = 1 THEN 1
 					ELSE
 						CASE
 							WHEN COALESCE ( ENR.Enrolments, 0 ) > 0 THEN 1 --Must have enrolments
@@ -264,7 +264,7 @@ BEGIN
     SET @SQLParams = 
         N'@System NVARCHAR(20),
         @AcademicYear NVARCHAR(5),
-        @RequireEnrols BIT,
+        @ShowCoursesWithoutEnrols BIT,
 		@ShowOutstanding BIT,
         @CourseSearch NVARCHAR(255)';
 
@@ -273,7 +273,7 @@ BEGIN
         @SQLParams, 
         @System = @System, 
         @AcademicYear = @AcademicYear, 
-        @RequireEnrols = @RequireEnrols,
+        @ShowCoursesWithoutEnrols = @ShowCoursesWithoutEnrols,
 		@ShowOutstanding = @ShowOutstanding,
         @CourseSearch = @CourseSearch;
 END

@@ -6,9 +6,9 @@ var numPages = 1;
 var curPage = 1;
 var numItems = 10;
 
-function loadAllCourses(system, academicYear, hasEnrols) {
+function loadAllCourses(system, academicYear, showCoursesWithoutEnrols) {
     return new Promise(resolve => {
-        let dataToLoad = `/CourseGroups/?handler=Json&academicYear=${academicYear}&hasEnrols=${hasEnrols}`;
+        let dataToLoad = `/CourseGroups/?handler=Json&academicYear=${academicYear}&showCoursesWithoutEnrols=${showCoursesWithoutEnrols}`;
 
         if (system !== "") {
             dataToLoad += `&system=${system}`;
@@ -378,6 +378,7 @@ function listLoadedCourseToFunctions() {
         //Display details of course being 
         let academicYear = $("#AcademicYearID").val();
         let progressionYear = $("#ProgressionYearID").val();
+        let progressionWithinTeam = $('#ProgressWithinTeamID').val();
         let faculty = $(this).attr("aria-describedby");
         let team = $(this).attr("data-parent");
         let courseID = $(this).attr("data-id");
@@ -414,7 +415,7 @@ function listLoadedCourseToFunctions() {
                 </thead>
                 <tbody>`;
 
-        try {
+        //try {
             for (let student in students) {
                 if (students[student].progressLearner === true) {
                     studentsHtml += `
@@ -512,10 +513,11 @@ function listLoadedCourseToFunctions() {
 
             $(".OfferReadyToEnrol").change(function (event) {
                 let studentRef = $(this).attr("data-id");
+                let progressionWithinTeam = $('#ProgressWithinTeamID').val();
                 let readyToEnrol = $(this).prop('checked');
                 let readyToEnrolOption = $("#OfferReadyToEnrolSelectList-" + studentRef).val();
 
-                if (readyToEnrol === true) {
+                if (readyToEnrol === true && progressionWithinTeam !== "Y") {
                     $("#OfferReadyToEnrolSelectListCol-" + studentRef).removeClass("d-none");
                 }
                 else {
@@ -524,13 +526,32 @@ function listLoadedCourseToFunctions() {
                 }
             });
 
+            //Now set the default option if not selected
+            for (let student in students) {
+                if (students[student].progressLearner === true && progressionWithinTeam !== "Y") {
+                    let studentOfferType = `#OfferTypeSelectList-${students[student].studentRef}`;
+                    $(studentOfferType).val('2');
+
+                    let studentConditionType = `#OfferConditionSelectList-${students[student].studentRef}`;
+                    $(studentConditionType).val('12');
+
+                    let studentConditionTypeCol = `#OfferConditionSelectListCol-${students[student].studentRef}`;
+                    $(studentConditionTypeCol).removeClass("d-none");
+
+                    //Update details for student
+                    recordOfferJson(students[student].studentRef, '2', '12', false, null);
+                }
+
+                $(".SaveProgressionButton").removeClass("disabled");
+            }
+
             //Scroll down page
             //$(".modal#ProgressionModal .modal-body").scrollTop($("#ProgressToArea").offset().top);
             $(".modal#ProgressionModal .modal-body").animate({ scrollTop: $("#ProgressToArea").offset().top }, "slow");
-        }
-        catch {
-            doErrorModal("Error Loading List of Learners", "Sorry an error occurred loading the list of learners.<br />Please attempt the operation again.");
-        }
+        //}
+        //catch {
+        //    doErrorModal("Error Loading List of Learners", "Sorry an error occurred loading the list of learners.<br />Please attempt the operation again.");
+        //}
     });
 }
 
@@ -540,6 +561,7 @@ function checkOfferDetails() {
     let recordsErr = 0;
     $(".OfferTypeSelectList").each(function (event) {
         let thisStudentRef = $(this).attr("data-id");
+        let progressionWithinTeam = $('#ProgressWithinTeamID').val();
         let thisOfferTypeVal = $(this).val();
         let thisOfferConditionVal = $("#OfferConditionSelectList-" + thisStudentRef).val();
         let thisReadyToEnrolFld = $("#OfferReadyToEnrol-" + thisStudentRef);
@@ -553,14 +575,14 @@ function checkOfferDetails() {
         else if (thisOfferTypeVal === "2" && thisOfferConditionVal === null) {
             recordsErr += 1;
         }
-        else if (thisReadyToEnrolVal === true && thisReadyToEnrolOptionVal === null) {
+        else if (thisReadyToEnrolVal === true && thisReadyToEnrolOptionVal === null && progressionWithinTeam !== "Y") {
             recordsErr += 1;
         }
         else {
             recordsOk += 1;
         }
     });
-
+    
     if (recordsOk > 0 && recordsErr === 0) {
         $(".SaveProgressionButton").removeClass("disabled");
         inputComplete = true;
@@ -617,7 +639,7 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                             <th scope="col" class="THSmall">Forename</th>
                             <th scope="col" class="THSmall">Age 31<sup>st</sup><br />Aug ${academicYear.substring(3, 5)}</th>
                             <th scope="col" class="THSmall">Completion</th>
-                            <th scope="col" class="text-center THSmall">Attend %</th>
+                            <th scope="col" class="text-center THSmall">Student Attend %</th>
                             <th scope="col" class="text-center THSmall">On Track To Achieve</th>
                             <th scope="col" class="text-center THSmall">${progressionYear} Apps<br />and Enrols</th>
                             <th scope="col" class="text-center THSmall">Progress</th>
@@ -653,6 +675,7 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
 
                 let attendSummary = `
                 <ul class='AttendSummary'>
+                    <li>Courses: ${students[student].classesCourses}</li>
                     <li>Planned: ${students[student].classesPlanned}</li>
                     <li>Counted: ${students[student].classesCounted}</li>
                     <li>Neutral (not counted): ${students[student].classesNeutral}</li>
@@ -731,7 +754,7 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                             <td>${students[student].surname}</td>
                             <td>${students[student].forename}</td>
                             <td class="text-center">${students[student].age31stAug + 1}</td>
-                            <td>${students[student].completion}</td>
+                            <td>${students[student].completionStatusName}</td>
                             <td class="text-center">
                                 <div class="AttendPercent ${attendRate} LearnerPopover" data-toggle="popover" aria-describedby="${academicYear} Attendance for ${students[student].forename} ${students[student].surname}" data-content="${attendSummary}">
                                     <div class="AttendValue">${+(attendPer * 100).toFixed(1)}&percnt;</div>
@@ -755,7 +778,7 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                             <td class="text-center">
                                 <div class="DestinationOptions" id="DestinationOptions-${students[student].studentRef}">
                                     <div class="custom-control custom-checkbox custom-control-inline" id="DestinationOptionsCheckbox-${students[student].studentRef}">
-                                        <input type="checkbox" id="RecordDestination-${students[student].studentRef}" class="custom-control-input RecordDestination" data-id="${students[student].studentRef}" />
+                                        <input type="checkbox" id="RecordDestination-${students[student].studentRef}" class="custom-control-input RecordDestination" data-id="${students[student].studentRef}" data-path="${students[student].completionStatusCode}" />
                                         <label class="custom-control-label" for="RecordDestination-${students[student].studentRef}">Record Destination</label>
                                     </div>
                                     <div class="row">
@@ -856,12 +879,25 @@ function listLoadedStudentFunctions() {
         let progressionYear = $("#ProgressionYearID").val();
 
         let studentRef = $(this).attr("data-id");
+        let competionStatusCode = $(this).attr("data-path");
         let notProgressing = $(this).prop("checked");
         let destinationSelectList = $("#DestinationOptionsSelectList-" + studentRef);
         let destinationIntendedActualSelectList = $("#DestinationIntendedActualSelectList-" + studentRef);
         let destinationCode = destinationSelectList.val();
         let destinationName = destinationSelectList.children("option:selected").text();
         let isActualDestination = destinationIntendedActualSelectList.val();
+
+        //If destination not yet set then default to intended if continuing or actual if not
+        if (isActualDestination === null) {
+            if (competionStatusCode === "1") {
+                isActualDestination = 0;
+                destinationIntendedActualSelectList.val(0);
+            }
+            else {
+                isActualDestination = 1;
+                destinationIntendedActualSelectList.val(1);
+            }
+        }
 
         if (notProgressing === true) {
             destinationSelectList.removeClass("d-none");

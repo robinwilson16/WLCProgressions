@@ -62,8 +62,11 @@ namespace WLCProgressions.Models
         [Display(Name = "Age on 31st Aug")]
         public int Age31stAug { get; set; }
 
+        [StringLength(1)]
+        public string CompletionStatusCode { get; set; }
+
         [StringLength(50)]
-        public string Completion { get; set; }
+        public string CompletionStatusName { get; set; }
         public int RiskCode { get; set; }
         
         [StringLength(25)]
@@ -81,6 +84,7 @@ namespace WLCProgressions.Models
         [StringLength(20)]
         public string OnTrackToAchieveTerm { get; set; }
 
+        public int ClassesCourses { get; set; }
         public int ClassesPlanned { get; set; }
         public int ClassesCounted { get; set; }
         public int ClassesMarked { get; set; }

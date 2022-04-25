@@ -17,11 +17,15 @@ namespace WLCProgressions.Pages
     {
         private readonly WLCProgressions.Data.ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly bool _showCharts;
+        private readonly bool _showCoursesWithoutEnrols;
 
         public IndexModel(WLCProgressions.Data.ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
             _configuration = configuration;
+            _showCharts = configuration.GetValue<bool>("ShowCharts");
+            _showCoursesWithoutEnrols = configuration.GetValue<bool>("ShowCoursesWithoutEnrols");
         }
 
         public IList<SelectListData> AcademicYearData { get; set; }
@@ -40,6 +44,10 @@ namespace WLCProgressions.Pages
         public string SystemVersion { get; set; }
 
         public string Browser { get; set; }
+
+        public bool ShowCharts { get; set; }
+
+        public int ShowCoursesWithoutEnrols { get; set; }
 
         public async Task OnGetAsync(string system, string systemILP, string academicYear)
         {
@@ -85,6 +93,17 @@ namespace WLCProgressions.Pages
             SystemVersion = _configuration["Version"];
 
             Browser = Request.Headers["User-Agent"];
+
+            ShowCharts = _showCharts;
+
+            if (_showCoursesWithoutEnrols == true)
+            {
+                ShowCoursesWithoutEnrols = 1;
+            }
+            else
+            {
+                ShowCoursesWithoutEnrols = 0;
+            }           
         }
     }
 }

@@ -1,8 +1,8 @@
 ﻿//Load initial course list from database and store in local storage
 var system = $("#SystemID").val();
 var academicYear = $("#AcademicYearID").val();
-var hasEnrols = true;
-loadAllCourses(system, academicYear, hasEnrols);
+var showCoursesWithoutEnrols = $("#ShowCoursesWithoutEnrolsID").val();
+loadAllCourses(system, academicYear, showCoursesWithoutEnrols);
 
 $(function () {
     $('[data-toggle="popover"]').popover();
@@ -173,18 +173,18 @@ $(".ProgressLearnerButton").click(function (event) {
     }
 
     if ($(this).hasClass("ProgressWithinFac")) {
-        $('#ProgressWithinFac').val("Y");
+        $('#ProgressWithinFacID').val("Y");
     }
     else {
-        $('#ProgressWithinFac').val("N");
+        $('#ProgressWithinFacID').val("N");
     }
 
     if ($(this).hasClass("ProgressWithinTeam")) {
-        $('#ProgressWithinTeam').val("Y");
+        $('#ProgressWithinTeamID').val("Y");
         $("#FormTitleID").val("Progression to Another Course in " + currentFacCode + " - " + currentTeamCode);
     }
     else {
-        $('#ProgressWithinTeam').val("N");
+        $('#ProgressWithinTeamID').val("N");
         $("#FormTitleID").val("Progression to a Course in Another Area");
     }
 
@@ -250,9 +250,9 @@ $("#ProgressionModal").on("shown.bs.modal", function () {
 
     let system = $("#SystemID").val();
     let academicYear = $("#ProgressionYearID").val();
-    let hasEnrols = false;
+    let showCoursesWithoutEnrols = 1;
     //Load courses for next year
-    loadAllCourses(system, academicYear, hasEnrols);
+    loadAllCourses(system, academicYear, showCoursesWithoutEnrols);
 });
 
 $("#ProgressionModal").on("hidden.bs.modal", function () {
@@ -260,9 +260,9 @@ $("#ProgressionModal").on("hidden.bs.modal", function () {
 
     let system = $("#SystemID").val();
     let academicYear = $("#AcademicYearID").val();
-    let hasEnrols = true;
+    let showCoursesWithoutEnrols = $("#ShowCoursesWithoutEnrolsID").val();
     //Load courses for current year
-    loadAllCourses(system, academicYear, hasEnrols);
+    loadAllCourses(system, academicYear, showCoursesWithoutEnrols);
 });
 
 function doQuestionModalAction() {
@@ -338,6 +338,7 @@ $(".SaveProgressionButton").click(function (event) {
 
         $(".OfferTypeSelectList").each(function (event) {
             let thisStudentRef = $(this).attr("data-id");
+            let progressionWithinTeam = $('#ProgressWithinTeamID').val();
             let thisOfferTypeFld = $(this);
             let thisOfferTypeVal = $(this).val();
             let thisOfferConditionFld = $("#OfferConditionSelectList-" + thisStudentRef);
@@ -367,7 +368,7 @@ $(".SaveProgressionButton").click(function (event) {
                 thisOfferTypeFld.addClass("InputError");
                 thisOfferConditionFld.addClass("InputError");
             }
-            else if (thisReadyToEnrolVal === true && thisReadyToEnrolOptionVal === null) {
+            else if (thisReadyToEnrolVal === true && thisReadyToEnrolOptionVal === null && progressionWithinTeam !== "Y") {
                 errors += `
                     <li>
                         Offer for learner "${thisStudentRef}" is marked as ready to enrol but no ready to enrol option has been selected
