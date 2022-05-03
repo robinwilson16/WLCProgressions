@@ -1,0 +1,78 @@
+﻿@page
+@model WLCProgressions.Pages.NoProgressionRoutes.IndexModel
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-page="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.NoProgressionRoute[0].SystemDatabase)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.NoProgressionRoute[0].AcademicYear)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.NoProgressionRoute[0].OfferingGroupID)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.NoProgressionRoute[0].Notes)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.NoProgressionRoute[0].CreatedDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.NoProgressionRoute[0].CreatedBy)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.NoProgressionRoute[0].UpdatedDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.NoProgressionRoute[0].UpdatedBy)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model.NoProgressionRoute) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.SystemDatabase)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AcademicYear)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.OfferingGroupID)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Notes)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CreatedDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CreatedBy)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.UpdatedDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.UpdatedBy)
+            </td>
+            <td>
+                @Html.ActionLink("Edit", "Edit", new { /* id=item.PrimaryKey */ }) |
+                @Html.ActionLink("Details", "Details", new { /* id=item.PrimaryKey */ }) |
+                @Html.ActionLink("Delete", "Delete", new { /* id=item.PrimaryKey */ })
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

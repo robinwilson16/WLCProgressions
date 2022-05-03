@@ -1,0 +1,45 @@
+﻿@page
+@model WLCProgressions.Pages.NoProgressionRoutes.CreateModel
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<h1>Create</h1>
+
+<h4>NoProgressionRoute</h4>
+<hr />
+<div class="row">
+    <div class="col-md" id="NoProgressionRouteForm">
+        <form method="post" id="NoProgressionRouteFormFields">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group row">
+                <label asp-for="NoProgressionRoute.Notes" class="col-sm-4 col-form-label"></label>
+                <div class="col-sm-8">
+                    <textarea asp-for="NoProgressionRoute.Notes" class="form-control"></textarea>
+                    <span asp-validation-for="NoProgressionRoute.Notes" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="form-group row">
+                <input type="hidden" asp-for="NoProgressionRoute.SystemDatabase" />
+                <input type="hidden" asp-for="NoProgressionRoute.StudentRef" />
+                <input type="hidden" asp-for="NoProgressionRoute.AcademicYear" />
+                <input type="hidden" asp-for="NoProgressionRoute.OfferingID" />
+                <input type="hidden" asp-for="NoProgressionRoute.OfferingGroupID" />
+                <input type="hidden" asp-for="NoProgressionRoute.CreatedDate" value="1900-01-01 10:30" />
+                <input type="hidden" asp-for="NoProgressionRoute.CreatedBy" />
+                <input type="hidden" asp-for="NoProgressionRoute.UpdatedDate" />
+                <input type="hidden" asp-for="NoProgressionRoute.UpdatedBy" />
+                <input type="hidden" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-page="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

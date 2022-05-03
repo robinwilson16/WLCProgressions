@@ -321,3 +321,129 @@ function saveProgression(system, academicYear, studentRef, courseFromID, groupFr
         }); 
     });
 }
+
+async function saveNoProgressionRoutes(system, academicYear, students, courseFromID, groupFromID) {
+    let antiForgeryTokenID = $("#AntiForgeryTokenID").val();
+    let numStudents = 0;
+    let numProgressedStudents = 0;
+    let numSaved = 0;
+    let numErrors = 0;
+    let studentRef = "0";
+    let progressLearner = false;
+    let alreadyProgressedStudents = [];
+
+    for (let student in students) {
+        numStudents += 1;
+
+        studentRef = students[student].studentRef;
+        progressLearner = students[student].progressLearner;
+
+        if (studentRef <= "0") {
+            console.log(`Error saving no progression route for student ${studentRef} in ${system} system`);
+            numErrors += 1;
+        }
+        else if (progressLearner === false) {
+            //Do nothing
+        }
+        else {
+            numProgressedStudents += 1;
+            let result;
+
+            //Only attempt to save progression if student has not already been progressed to this course
+            //result = await saveNoProgressionRoute(system, academicYear, studentRef, courseFromID, groupFromID, antiForgeryTokenID);
+            result = 1;
+            numSaved += result;
+        }
+    }
+
+    //Close modal
+    $("#NoProgressionModal").modal("hide");
+
+    let title = ``;
+    let content = ``;
+
+    numErrors = numProgressedStudents - numSaved;
+    if (numStudents === 0) {
+        let title = `Error Saving No Progression Route (NSR: No Students Retrieved)`;
+        let content = `
+            Sorry an error occurred saving the no progression option for the learners.<br />
+            Please try again.`;
+
+        doErrorModal(title, content);
+    }
+    else if (numProgressedStudents === 0) {
+        let title = `Error Saving No Progression Route (NSS: No Students Selected)`;
+        let content = `
+            No students were selected for no progression option.<br />
+            Please review your selection and retry.`;
+
+        doErrorModal(title, content);
+    }
+    else if (numSaved !== numProgressedStudents) {
+        let title = `Error Saving No Progression Option (NAS: Not All Saved)`;
+        let content = `
+            Sorry an error occurred saving the no progression option for <strong>${numErrors}</strong> of the <strong>${numProgressedStudents}</strong> learners.<br />
+            Please review the data and retry.`;
+
+        doErrorModal(title, content);
+    }
+    else {
+        let title = `No Progression Route Successfully Saved`;
+        let content = `
+            No progression route data has been successfully recorded for all <strong>${numSaved}</strong> learners.`;
+
+        doModal(title, content);
+    }
+}
+
+function saveNoProgressionRoute(system, academicYear, studentRef, courseFromID, groupFromID, antiForgeryTokenID) {
+    return new Promise(resolve => {
+        let numSaved = 0;
+        let numErrors = 0;
+
+        let progressionURL = "";
+
+        if (system !== null) {
+            progressionURL = `/Students/SaveProgression/${studentRef}?system=${system}`;
+        }
+        else {
+            progressionURL = `/Students/SaveProgression/${studentRef}`;
+        }
+
+        $.ajax({
+            type: "POST",
+            url: progressionURL,
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("RequestVerificationToken", antiForgeryTokenID);
+            },
+            data: {
+                'Progression.SystemDatabase': system,
+                'Progression.AcademicYear': academicYear,
+                'Progression.StudentRef': studentRef,
+                'Progression.CourseFromID': courseFromID,
+                'Progression.GroupFromID': groupFromID,
+                'Progression.CourseToID': courseToID,
+                'Progression.GroupToID': groupToID,
+                'Progression.ProgressionType': progressionType,
+                'Progression.OfferTypeID': offerTypeID,
+                'Progression.OfferConditionID': offerConditionID,
+                'Progression.ReadyToEnrolOption': readyToEnrolOption,
+                '__RequestVerificationToken': antiForgeryTokenID
+            },
+            success: function (data) {
+                var audio = new Audio("/sounds/confirm.wav");
+                audio.play();
+                console.log(`Progression for "${studentRef}" saved for course "${courseToID}", group "${groupToID}" in ${system} system`);
+                numSaved += 1;
+                resolve(1);
+            },
+            error: function (error) {
+                //doCrashModal(error);
+                console.log(`Error saving progression for "${studentRef}" for course "${courseToID}", group "${groupToID}" in ${system} system`);
+                numErrors += 1;
+                //reject(0);
+                resolve(0);
+            }
+        });
+    });
+}

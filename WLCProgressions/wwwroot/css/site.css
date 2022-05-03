@@ -1,4 +1,8 @@
-﻿nav .NavLogo {
+﻿textarea {
+    min-height: 10em;
+}
+
+nav .NavLogo {
     margin-top: -10px;
     margin-bottom: -10px;
     background-color: #ffffff;

@@ -1,0 +1,71 @@
+﻿@page
+@model WLCProgressions.Pages.NoProgressionRoutes.EditModel
+
+@{
+    ViewData["Title"] = "Edit";
+}
+
+<h1>Edit</h1>
+
+<h4>NoProgressionRoute</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="NoProgressionRoute.SystemDatabase" class="control-label"></label>
+                <input asp-for="NoProgressionRoute.SystemDatabase" class="form-control" />
+                <span asp-validation-for="NoProgressionRoute.SystemDatabase" class="text-danger"></span>
+            </div>
+            <input type="hidden" asp-for="NoProgressionRoute.StudentRef" />
+            <div class="form-group">
+                <label asp-for="NoProgressionRoute.AcademicYear" class="control-label"></label>
+                <input asp-for="NoProgressionRoute.AcademicYear" class="form-control" />
+                <span asp-validation-for="NoProgressionRoute.AcademicYear" class="text-danger"></span>
+            </div>
+            <input type="hidden" asp-for="NoProgressionRoute.OfferingID" />
+            <div class="form-group">
+                <label asp-for="NoProgressionRoute.OfferingGroupID" class="control-label"></label>
+                <input asp-for="NoProgressionRoute.OfferingGroupID" class="form-control" />
+                <span asp-validation-for="NoProgressionRoute.OfferingGroupID" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="NoProgressionRoute.Notes" class="control-label"></label>
+                <input asp-for="NoProgressionRoute.Notes" class="form-control" />
+                <span asp-validation-for="NoProgressionRoute.Notes" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="NoProgressionRoute.CreatedDate" class="control-label"></label>
+                <input asp-for="NoProgressionRoute.CreatedDate" class="form-control" />
+                <span asp-validation-for="NoProgressionRoute.CreatedDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="NoProgressionRoute.CreatedBy" class="control-label"></label>
+                <input asp-for="NoProgressionRoute.CreatedBy" class="form-control" />
+                <span asp-validation-for="NoProgressionRoute.CreatedBy" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="NoProgressionRoute.UpdatedDate" class="control-label"></label>
+                <input asp-for="NoProgressionRoute.UpdatedDate" class="form-control" />
+                <span asp-validation-for="NoProgressionRoute.UpdatedDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="NoProgressionRoute.UpdatedBy" class="control-label"></label>
+                <input asp-for="NoProgressionRoute.UpdatedBy" class="form-control" />
+                <span asp-validation-for="NoProgressionRoute.UpdatedBy" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-page="./Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -167,19 +167,30 @@ $(".ProgressLearnerButton").click(function (event) {
     let currentTeamCode = $("#CurrentTeamCode").val();
     let isDestinationsButtonDisabled = $("#SaveDestinationButton").hasClass("disabled");
     let unsavedDestinationsExist = false;
+    let isProgressing = true;
 
     if (isDestinationsButtonDisabled === false) {
         unsavedDestinationsExist = true;
     }
 
-    if ($(this).hasClass("ProgressWithinFac")) {
+    if ($(this).hasClass("NoProgressionRoute")) {
+        $('#NoProgressionRouteID').val("Y");
+        $('#ProgressWithinFacID').val("N");
+        isProgressing = false;
+    }
+    else if ($(this).hasClass("ProgressWithinFac")) {
         $('#ProgressWithinFacID').val("Y");
     }
     else {
         $('#ProgressWithinFacID').val("N");
     }
 
-    if ($(this).hasClass("ProgressWithinTeam")) {
+    if ($(this).hasClass("NoProgressionRoute")) {
+        $('#NoProgressionRouteID').val("Y");
+        $('#ProgressWithinTeamID').val("N");
+        isProgressing = false;
+    }
+    else if ($(this).hasClass("ProgressWithinTeam")) {
         $('#ProgressWithinTeamID').val("Y");
         $("#FormTitleID").val("Progression to Another Course in " + currentFacCode + " - " + currentTeamCode);
     }
@@ -213,27 +224,41 @@ $(".ProgressLearnerButton").click(function (event) {
             }
             else if (saveChanges === "Y") {
                 $(".SaveDestinationButton").trigger("click");
-                $('#ProgressionModal').modal();
+                showProgressionModal(isProgressing);
             }
             else if (saveChanges === "N") {
-                $('#ProgressionModal').modal();
+                showProgressionModal(isProgressing);
             }
             else if (saveChanges === "C") {
                 //Do nothing
             }
             else {
                 //If no destinations set then is not asked question so should default to proceed
-                $('#ProgressionModal').modal();
+                showProgressionModal(isProgressing);
             }
 
             //Reset modal answer
             $("#QuestionModalAnswerID").val("");
         }
         else {
-            doModal("No Students Selected", "Please select one or more students to progress.");
+            if (isProgressing === true) {
+                doModal("No Students Selected", "Please select one or more students to progress.");
+            }
+            else {
+                doModal("No Students Selected", "Please select one or more students where there is no progression route.");
+            }
         }
     }
 });
+
+function showProgressionModal(isProgressing) {
+    if (isProgressing === true) {
+        $('#ProgressionModal').modal();
+    }
+    else {
+        $('#NoProgressionRouteModal').modal();
+    }
+}
 
 $("#ProgressionModal").on("shown.bs.modal", function () {
     var courseID = $("#ProgressFromCourseID").val();
@@ -263,6 +288,32 @@ $("#ProgressionModal").on("hidden.bs.modal", function () {
     let showCoursesWithoutEnrols = $("#ShowCoursesWithoutEnrolsID").val();
     //Load courses for current year
     loadAllCourses(system, academicYear, showCoursesWithoutEnrols);
+});
+
+$("#NoProgressionRouteModal").on("shown.bs.modal", function () {
+    let dataToLoad = `/NoProgressionRoutes/Create`;
+
+    $.get(dataToLoad, function (data) {
+
+    })
+        .then(data => {
+            var formData = $(data).find("#NoProgressionRouteForm");
+            $("#NoProgressionRouteDetails").html(formData);
+
+
+            console.log(`NoProgressionRoutes form data from NoProgressionRouteForm loaded into NoProgressionRouteDetails`);
+        })
+        .fail(function () {
+            let title = `Error Loading NoProgressionRoutes Information`;
+            let content = `The form NoProgressionRoutes data at ${dataToLoad} returned a server error and could not be loaded`;
+
+            doErrorModal(title, content);
+        });
+});
+
+$("#NoProgressionRouteModal").on("hidden.bs.modal", function () {
+    let loadingAnim = $("#LoadingHTML").html();
+    $("#NoProgressionRouteDetails").html(loadingAnim);
 });
 
 function doQuestionModalAction() {
@@ -395,6 +446,17 @@ $(".SaveProgressionButton").click(function (event) {
 
         doModal("Please Review Your Selection", errors);
     }
+});
+
+$(".SaveNoProgressionRouteButton").click(function (event) {
+    let system = $("#SystemID").val();
+    let academicYear = $("#AcademicYearID").val();
+    let progressionYear = $("#ProgressionYearID").val();
+    let students = JSON.parse(localStorage.getItem("students"));
+    let courseFromID = $("#ProgressFromCourseID").val();
+    let groupFromID = $("#ProgressFromGroupID").val();
+
+    saveNoProgressionRoutes(system, progressionYear, students, courseFromID, groupFromID);
 });
 
 $(".SaveDestinationButton").click(function (event) {
