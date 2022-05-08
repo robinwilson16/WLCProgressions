@@ -10,11 +10,13 @@ BEGIN
 	SET DATEFORMAT ymd
 
 	--DECLARE @System NVARCHAR(20) = 'ProSolution'
-	--DECLARE @AcademicYear NVARCHAR(5) = '20/21'
+	--DECLARE @AcademicYear NVARCHAR(5) = '21/22'
 	--DECLARE @Measure NVARCHAR(20) = 'Outstanding'
 	--DECLARE @Level INT = 1
 	--DECLARE @Drill NVARCHAR(24) = NULL
 	
+
+	DECLARE @NextYear VARCHAR(5) = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + '/' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
 	DECLARE @SQLChartTitle NVARCHAR(MAX);
 	DECLARE @MeasureValue NVARCHAR(MAX); 
 	DECLARE @AdditionalFields NVARCHAR(MAX); 
@@ -274,13 +276,13 @@ BEGIN
 			Level = CAST ( @Level AS INT ),
 			' + @AdditionalFields + '
 		FROM ' + @System + '.dbo.Offering CRS
-		INNER JOIN ' + @System + '.dbo.Site STE
+		LEFT JOIN ' + @System + '.dbo.Site STE
 			ON STE.SiteID = CRS.SiteID
-		INNER JOIN ' + @System + '.dbo.CollegeLevel TEAM
+		LEFT JOIN ' + @System + '.dbo.CollegeLevel TEAM
 			ON TEAM.SID = CRS.SID
-		INNER JOIN ' + @System + '.dbo.CollegeLevel FAC
+		LEFT JOIN ' + @System + '.dbo.CollegeLevel FAC
 			ON FAC.SID = TEAM.ParentSID
-		INNER JOIN ' + @System + '.dbo.CollegeLevel CGRP
+		LEFT JOIN ' + @System + '.dbo.CollegeLevel CGRP
 			ON CGRP.SID = FAC.ParentSID
 		LEFT JOIN (
 			SELECT DISTINCT
@@ -320,6 +322,7 @@ BEGIN
 						CASE 
 							WHEN COALESCE ( NYA.NumApps, 0 ) >= 1 THEN 1
 							WHEN COALESCE ( NYE.NumEnrols, 0 ) >= 1 THEN 1
+							WHEN NPR.StudentRef IS NOT NULL THEN 1
 							ELSE 0
 						END
 					),
@@ -343,6 +346,7 @@ BEGIN
 						WHEN COALESCE ( NYA.NumApps, 0 ) >= 1 THEN 1
 						WHEN COALESCE ( NYE.NumEnrols, 0 ) >= 1 THEN 1
 						WHEN COALESCE ( DES.NumDestinations, 0 ) >= 1 THEN 1
+						WHEN NPR.StudentRef IS NOT NULL THEN 1
 						ELSE 0
 					END
 				),
@@ -352,6 +356,7 @@ BEGIN
 						WHEN COALESCE ( NYA.NumApps, 0 ) >= 1 THEN 1
 						WHEN COALESCE ( NYE.NumEnrols, 0 ) >= 1 THEN 1
 						WHEN COALESCE ( DES.NumValidDestinations, 0 ) >= 1 THEN 1
+						WHEN NPR.StudentRef IS NOT NULL THEN 1
 						ELSE 0
 					END
 				)
@@ -377,7 +382,7 @@ BEGIN
 				INNER JOIN ' + @System + '.dbo.Offering CRS
 					ON CRS.OfferingID = APPC.OfferingID
 				WHERE
-					SD.AcademicYearID = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + ''/'' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
+					SD.AcademicYearID = @NextYear
 					AND COALESCE ( APP.CollegeDecisionID, 1 ) <> 0
 					AND COALESCE ( APP.DecisionID, 1 ) = 1
 				GROUP BY
@@ -398,7 +403,7 @@ BEGIN
 				INNER JOIN ' + @System + '.dbo.Offering CRS
 					ON CRS.OfferingID = ENR.OfferingID
 				WHERE
-					SD.AcademicYearID = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + ''/'' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
+					SD.AcademicYearID = @NextYear
 					AND ENR.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
 				GROUP BY
 					SD.AcademicYearID,
@@ -422,9 +427,15 @@ BEGIN
 					OC.StudentID
 			) DES
 				ON DES.StudentID = SD.StudentID
+			LEFT JOIN WLC.dbo.PRG_NoProgressionRoute NPR
+				ON NPR.StudentRef = SD.RefNo
+				AND NPR.AcademicYear = @NextYear
+				AND NPR.OfferingID = CRS.OfferingID
+				AND NPR.SystemDatabase = ''' + @System + '''
 			WHERE
 				SD.AcademicYearID = @AcademicYear
 				AND ENR.CompletionStatusID IN ( ''1'', ''2'' )
+				--AND SD.RefNo = ''11151451''
 			GROUP BY
 				ENR.OfferingID,
 				ENR.OfferingGroupID
@@ -455,6 +466,7 @@ BEGIN
     SET @SQLParams = 
         N'@System NVARCHAR(20),
         @AcademicYear NVARCHAR(5),
+		@NextYear NVARCHAR(5),
         @Level NVARCHAR(10),
 		@Drill NVARCHAR(24)';
 
@@ -463,6 +475,7 @@ BEGIN
         @SQLParams, 
         @System = @System, 
         @AcademicYear = @AcademicYear, 
+		@NextYear = @NextYear, 
         @Level = @Level,
 		@Drill = @Drill;
 END

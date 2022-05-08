@@ -57,6 +57,8 @@ namespace WLCProgressions.Models
         public int HasDestination { get; set; }
         public int HasValidDestination { get; set; }
         public int HasProgressionDestination { get; set; }
+        public int HasNoProgressionRoute { get; set; }
+
         public int CompletedRecords { get; set; }
         public double CompletedRecordsPer { get; set; }
         public int OutstandingRecords { get; set; }

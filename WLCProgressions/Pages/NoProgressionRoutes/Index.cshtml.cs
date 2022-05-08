@@ -23,7 +23,7 @@ namespace WLCProgressions.Pages.NoProgressionRoutes
 
         public async Task OnGetAsync()
         {
-            NoProgressionRoute = await _context.NoProgressionRoute_1.ToListAsync();
+            NoProgressionRoute = await _context.NoProgressionRoute.ToListAsync();
         }
     }
 }

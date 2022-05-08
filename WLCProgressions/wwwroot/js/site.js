@@ -165,6 +165,7 @@ $(".ProgressLearnerButton").click(function (event) {
 
     let currentFacCode = $("#CurrentFacCode").val();
     let currentTeamCode = $("#CurrentTeamCode").val();
+    let currentCourseCode = $("#CurrentCourseCode").val();
     let isDestinationsButtonDisabled = $("#SaveDestinationButton").hasClass("disabled");
     let unsavedDestinationsExist = false;
     let isProgressing = true;
@@ -275,7 +276,7 @@ $("#ProgressionModal").on("shown.bs.modal", function () {
 
     let system = $("#SystemID").val();
     let academicYear = $("#ProgressionYearID").val();
-    let showCoursesWithoutEnrols = 1;
+    let showCoursesWithoutEnrols = true;
     //Load courses for next year
     loadAllCourses(system, academicYear, showCoursesWithoutEnrols);
 });
@@ -291,6 +292,63 @@ $("#ProgressionModal").on("hidden.bs.modal", function () {
 });
 
 $("#NoProgressionRouteModal").on("shown.bs.modal", function () {
+    let numStudents = 0;
+    let students = JSON.parse(localStorage.getItem("students"));
+    let currentFacCode = $("#CurrentFacCode").val();
+    let currentTeamCode = $("#CurrentTeamCode").val();
+    let currentCourseCode = $("#CurrentCourseCode").val();
+
+    $("#FormTitleID").val("No Progression Route for " + currentCourseCode + " in " + currentFacCode + " - " + currentTeamCode);
+
+    var formTitle = $("#FormTitleID").val();
+    $("#NoProgressionRouteModalLabel").find(".title").html(formTitle);
+
+    let studentList = ``;
+
+    studentList += `
+        <table class="table">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Student Ref</th>
+                    <th scope="col">Surname</th>
+                    <th scope="col">Forename</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    for (let student in students) {
+        studentRef = students[student].studentRef;
+        progressLearner = students[student].progressLearner;
+        surname = students[student].surname;
+        forename = students[student].forename;
+
+        if (progressLearner === false) {
+            //Do nothing
+        }
+        else {
+            numStudents += 1;
+            saveNoProgressionRoutes
+            studentList += `
+                <tr>
+                    <th scope="row">${studentRef}</th>
+                    <td>${surname}</td>
+                    <td>${forename}</td>
+                </tr>
+            `;
+        }
+    }
+
+    studentList += `
+            </tbody>
+        </table>`;
+
+    studentList =
+        `<h4>No progression route available for ${numStudents} learners</h4>
+        ${studentList}`;
+
+    let noProgressionRouteStudentList = document.getElementById("NoProgressionRouteStudentList")
+    noProgressionRouteStudentList.innerHTML = studentList;
+
     let dataToLoad = `/NoProgressionRoutes/Create`;
 
     $.get(dataToLoad, function (data) {
@@ -299,7 +357,6 @@ $("#NoProgressionRouteModal").on("shown.bs.modal", function () {
         .then(data => {
             var formData = $(data).find("#NoProgressionRouteForm");
             $("#NoProgressionRouteDetails").html(formData);
-
 
             console.log(`NoProgressionRoutes form data from NoProgressionRouteForm loaded into NoProgressionRouteDetails`);
         })
@@ -453,10 +510,11 @@ $(".SaveNoProgressionRouteButton").click(function (event) {
     let academicYear = $("#AcademicYearID").val();
     let progressionYear = $("#ProgressionYearID").val();
     let students = JSON.parse(localStorage.getItem("students"));
-    let courseFromID = $("#ProgressFromCourseID").val();
-    let groupFromID = $("#ProgressFromGroupID").val();
+    let offeringID = $("#ProgressFromCourseID").val();
+    let offeringGroupID = $("#ProgressFromGroupID").val();
+    let notes = $("#NoProgressionRouteNotesID").val();
 
-    saveNoProgressionRoutes(system, progressionYear, students, courseFromID, groupFromID);
+    saveNoProgressionRoutes(system, progressionYear, students, offeringID, offeringGroupID, notes);
 });
 
 $(".SaveDestinationButton").click(function (event) {

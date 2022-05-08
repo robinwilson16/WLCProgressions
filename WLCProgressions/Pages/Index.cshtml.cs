@@ -47,7 +47,7 @@ namespace WLCProgressions.Pages
 
         public bool ShowCharts { get; set; }
 
-        public int ShowCoursesWithoutEnrols { get; set; }
+        public bool ShowCoursesWithoutEnrols { get; set; }
 
         public async Task OnGetAsync(string system, string systemILP, string academicYear)
         {
@@ -96,14 +96,7 @@ namespace WLCProgressions.Pages
 
             ShowCharts = _showCharts;
 
-            if (_showCoursesWithoutEnrols == true)
-            {
-                ShowCoursesWithoutEnrols = 1;
-            }
-            else
-            {
-                ShowCoursesWithoutEnrols = 0;
-            }           
+            ShowCoursesWithoutEnrols = _showCoursesWithoutEnrols;         
         }
     }
 }

@@ -28,7 +28,7 @@ namespace WLCProgressions.Pages.NoProgressionRoutes
                 return NotFound();
             }
 
-            NoProgressionRoute = await _context.NoProgressionRoute_1.FirstOrDefaultAsync(m => m.StudentRef == id);
+            NoProgressionRoute = await _context.NoProgressionRoute.FirstOrDefaultAsync(m => m.StudentRef == id);
 
             if (NoProgressionRoute == null)
             {

@@ -105,6 +105,31 @@ namespace WLCProgressions.Models
 
         public string EnrolledCoursesNextYear { get; set; }
 
+        [StringLength(1)]
+        public string NoProgressionRoute { get; set; }
+
+        [StringLength(255)]
+        public string NoProgressionRouteReason { get; set; }
+
+        [Display(Name = "No Progression Route Created Date")]
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        public DateTime NoProgressionRouteCreatedDate { get; set; }
+
+
+        [Display(Name = "No Progression Route Created By")]
+        [StringLength(50)]
+        public string NoProgressionRouteCreatedBy { get; set; }
+
+        [Display(Name = "No Progression Route Updated Date")]
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        public DateTime? NoProgressionRouteUpdatedDate { get; set; }
+
+        [Display(Name = "No Progression Route Updated By")]
+        [StringLength(50)]
+        public string NoProgressionRouteUpdatedBy { get; set; }
+
         public int? DestinationCode { get; set; }
 
         [StringLength(255)]

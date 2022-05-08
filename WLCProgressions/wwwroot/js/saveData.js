@@ -322,7 +322,7 @@ function saveProgression(system, academicYear, studentRef, courseFromID, groupFr
     });
 }
 
-async function saveNoProgressionRoutes(system, academicYear, students, courseFromID, groupFromID) {
+async function saveNoProgressionRoutes(system, academicYear, students, offeringID, offeringGroupID, notes) {
     let antiForgeryTokenID = $("#AntiForgeryTokenID").val();
     let numStudents = 0;
     let numProgressedStudents = 0;
@@ -330,7 +330,6 @@ async function saveNoProgressionRoutes(system, academicYear, students, courseFro
     let numErrors = 0;
     let studentRef = "0";
     let progressLearner = false;
-    let alreadyProgressedStudents = [];
 
     for (let student in students) {
         numStudents += 1;
@@ -350,14 +349,13 @@ async function saveNoProgressionRoutes(system, academicYear, students, courseFro
             let result;
 
             //Only attempt to save progression if student has not already been progressed to this course
-            //result = await saveNoProgressionRoute(system, academicYear, studentRef, courseFromID, groupFromID, antiForgeryTokenID);
-            result = 1;
+            result = await saveNoProgressionRoute(system, academicYear, studentRef, offeringID, offeringGroupID, notes, antiForgeryTokenID);
             numSaved += result;
         }
     }
 
     //Close modal
-    $("#NoProgressionModal").modal("hide");
+    $("#NoProgressionRouteModal").modal("hide");
 
     let title = ``;
     let content = ``;
@@ -396,7 +394,7 @@ async function saveNoProgressionRoutes(system, academicYear, students, courseFro
     }
 }
 
-function saveNoProgressionRoute(system, academicYear, studentRef, courseFromID, groupFromID, antiForgeryTokenID) {
+function saveNoProgressionRoute(system, academicYear, studentRef, offeringID, offeringGroupID, notes, antiForgeryTokenID) {
     return new Promise(resolve => {
         let numSaved = 0;
         let numErrors = 0;
@@ -404,10 +402,10 @@ function saveNoProgressionRoute(system, academicYear, studentRef, courseFromID, 
         let progressionURL = "";
 
         if (system !== null) {
-            progressionURL = `/Students/SaveProgression/${studentRef}?system=${system}`;
+            progressionURL = `/NoProgressionRoutes/Create/?system=${system}`;
         }
         else {
-            progressionURL = `/Students/SaveProgression/${studentRef}`;
+            progressionURL = `/NoProgressionRoutes/Create/`;
         }
 
         $.ajax({
@@ -417,29 +415,24 @@ function saveNoProgressionRoute(system, academicYear, studentRef, courseFromID, 
                 xhr.setRequestHeader("RequestVerificationToken", antiForgeryTokenID);
             },
             data: {
-                'Progression.SystemDatabase': system,
-                'Progression.AcademicYear': academicYear,
-                'Progression.StudentRef': studentRef,
-                'Progression.CourseFromID': courseFromID,
-                'Progression.GroupFromID': groupFromID,
-                'Progression.CourseToID': courseToID,
-                'Progression.GroupToID': groupToID,
-                'Progression.ProgressionType': progressionType,
-                'Progression.OfferTypeID': offerTypeID,
-                'Progression.OfferConditionID': offerConditionID,
-                'Progression.ReadyToEnrolOption': readyToEnrolOption,
+                'NoProgressionRoute.SystemDatabase': system,
+                'NoProgressionRoute.AcademicYear': academicYear,
+                'NoProgressionRoute.StudentRef': studentRef,
+                'NoProgressionRoute.OfferingID': offeringID,
+                'NoProgressionRoute.OfferingGroupID': offeringGroupID,
+                'NoProgressionRoute.Notes': notes,
                 '__RequestVerificationToken': antiForgeryTokenID
             },
             success: function (data) {
                 var audio = new Audio("/sounds/confirm.wav");
                 audio.play();
-                console.log(`Progression for "${studentRef}" saved for course "${courseToID}", group "${groupToID}" in ${system} system`);
+                console.log(`No Progression option for "${studentRef}" saved in ${system} system`);
                 numSaved += 1;
                 resolve(1);
             },
             error: function (error) {
                 //doCrashModal(error);
-                console.log(`Error saving progression for "${studentRef}" for course "${courseToID}", group "${groupToID}" in ${system} system`);
+                console.log(`Error saving No Progression option for "${studentRef}" saved in ${system} system`);
                 numErrors += 1;
                 //reject(0);
                 resolve(0);

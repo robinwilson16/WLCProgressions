@@ -11,10 +11,12 @@ BEGIN
 
 	--DECLARE @System NVARCHAR(50) = 'ProSolution'
 	--DECLARE @SystemILP NVARCHAR(50) = 'PROMONITOR.ProMonitor'
-	--DECLARE @AcademicYear NVARCHAR(5) = '20/21'
-	--DECLARE @CourseID int = 33664
-	--DECLARE @GroupID int = 44409
+	--DECLARE @AcademicYear NVARCHAR(5) = '21/22'
+	--DECLARE @CourseID int = 39831
+	--DECLARE @GroupID int = 47631
 
+
+	DECLARE @NextYear VARCHAR(5) = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + '/' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
     DECLARE @DestinationYear NVARCHAR(5)
     SET @DestinationYear = 
         ( 
@@ -83,6 +85,22 @@ BEGIN
         AppliedCoursesNextYear = NYA.Courses,
         NumEnrolsNextYear = COALESCE ( NYE.NumEnrols, 0 ),
         EnrolledCoursesNextYear = NYE.Courses,
+		NoProgressionRoute = 
+			CASE
+				WHEN NPR.StudentRef IS NOT NULL THEN
+					CASE
+						WHEN COALESCE ( NYA.NumApps, 0 ) = 0
+						AND COALESCE ( NYE.NumEnrols, 0 ) = 0
+							THEN ''Y''
+						ELSE ''N''
+					END
+				ELSE ''N''
+			END,
+		NoProgressionRouteReason = NPR.Notes,
+		NoProgressionRouteCreatedDate = NPR.CreatedDate,
+		NoProgressionRouteCreatedBy = NPR.CreatedBy,
+		NoProgressionRouteUpdatedDate = NPR.UpdatedDate,
+		NoProgressionRouteUpdatedBy = NPR.UpdatedBy,
         DestinationCode = DES.LocalDestinationID,
         DestinationName = DES.Description,
 		DestinationIsActual = CAST ( OC.IsActualDestination AS INT ),
@@ -394,7 +412,7 @@ BEGIN
 		INNER JOIN ' + @System + '.dbo.Offering CRS
 			ON CRS.OfferingID = APPC.OfferingID
 		WHERE
-			SD.AcademicYearID = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + ''/'' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
+			SD.AcademicYearID = @NextYear
 			AND COALESCE ( APP.CollegeDecisionID, 1 ) <> 0
 			AND COALESCE ( APP.DecisionID, 1 ) = 1
 		GROUP BY
@@ -437,7 +455,7 @@ BEGIN
         INNER JOIN ' + @System + '.dbo.Offering CRS
             ON CRS.OfferingID = ENR.OfferingID
         WHERE
-            SD.AcademicYearID = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + ''/'' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
+            SD.AcademicYearID = @NextYear
             AND ENR.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
         GROUP BY
             SD.AcademicYearID,
@@ -445,6 +463,11 @@ BEGIN
 			SD.StudentDetailID
     ) NYE
         ON NYE.StudentID = SD.StudentID
+	LEFT JOIN WLC.dbo.PRG_NoProgressionRoute NPR
+		ON NPR.StudentRef = SD.RefNo
+		AND NPR.AcademicYear = @NextYear
+		AND NPR.OfferingID = CRS.OfferingID
+		AND NPR.SystemDatabase = ''' + @System + '''
 	WHERE
 		SD.AcademicYearID = @AcademicYear
 		AND ENR.CompletionStatusID IN ( ''1'', ''2'' )
@@ -463,6 +486,7 @@ BEGIN
         N'@System NVARCHAR(50),
         @SystemILP NVARCHAR(50),
         @AcademicYear NVARCHAR(5),
+		@NextYear NVARCHAR(5),
         @DestinationYear NVARCHAR(5),
         @CourseID int,
 	    @GroupID int';
@@ -473,6 +497,7 @@ BEGIN
         @System = @System, 
         @SystemILP = @SystemILP, 
         @AcademicYear = @AcademicYear,
+		@NextYear = @NextYear, 
         @DestinationYear = @DestinationYear, 
         @CourseID = @CourseID,
         @GroupID = @GroupID;

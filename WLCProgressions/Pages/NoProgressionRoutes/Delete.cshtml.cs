@@ -29,7 +29,7 @@ namespace WLCProgressions.Pages.NoProgressionRoutes
                 return NotFound();
             }
 
-            NoProgressionRoute = await _context.NoProgressionRoute_1.FirstOrDefaultAsync(m => m.StudentRef == id);
+            NoProgressionRoute = await _context.NoProgressionRoute.FirstOrDefaultAsync(m => m.StudentRef == id);
 
             if (NoProgressionRoute == null)
             {
@@ -49,7 +49,7 @@ namespace WLCProgressions.Pages.NoProgressionRoutes
 
             if (NoProgressionRoute != null)
             {
-                _context.NoProgressionRoute_1.Remove(NoProgressionRoute);
+                _context.NoProgressionRoute.Remove(NoProgressionRoute);
                 await _context.SaveChangesAsync();
             }
 

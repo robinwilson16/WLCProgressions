@@ -12,11 +12,12 @@ BEGIN
     DECLARE @SQLString NVARCHAR(MAX);
     DECLARE @SQLParams NVARCHAR(MAX);
 
-	--DECLARE @System VARCHAR(50) = 'ProSolutionTraining'
-	--DECLARE @AcademicYear VARCHAR(5) = '20/21'
-	--DECLARE @StudentRef VARCHAR(50) = '11000000'
-	--DECLARE @CourseID INT = 32699
+	--DECLARE @System VARCHAR(50) = 'ProSolution'
+	--DECLARE @AcademicYear VARCHAR(5) = '21/22'
+	--DECLARE @StudentRef VARCHAR(50) = '11151451'
+	--DECLARE @CourseID INT = 39831
 	
+	DECLARE @NextYear VARCHAR(5) = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + '/' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
 	DECLARE @DestinationYear NVARCHAR(5)
     SET @DestinationYear = 
         ( 
@@ -70,6 +71,12 @@ BEGIN
         AppliedCoursesNextYear = '''',
         NumEnrolsNextYear = 0,
         EnrolledCoursesNextYear = '''',
+		NoProgressionRoute = ''N''
+		NoProgressionRouteReason = '''',
+		NoProgressionRouteCreatedDate = GETDATE(),
+		NoProgressionRouteCreatedBy = '',
+		NoProgressionRouteUpdatedDate = NULL,
+		NoProgressionRouteUpdatedBy = '',
         DestinationCode = DES.LocalDestinationID,
         DestinationName = DES.Description,
 		DestinationIsActual = CAST ( OC.IsActualDestination AS INT ),
@@ -148,6 +155,7 @@ BEGIN
     SET @SQLParams = 
         N'@System NVARCHAR(20),
         @AcademicYear NVARCHAR(5),
+		@NextYear NVARCHAR(5),
 		@DestinationYear NVARCHAR(5),
         @StudentRef NVARCHAR(50),
 		@CourseID INT';
@@ -157,6 +165,7 @@ BEGIN
         @SQLParams, 
         @System = @System, 
         @AcademicYear = @AcademicYear, 
+		@NextYear = @NextYear, 
 		@DestinationYear = @DestinationYear,
         @StudentRef = @StudentRef,
 		@CourseID = @CourseID;

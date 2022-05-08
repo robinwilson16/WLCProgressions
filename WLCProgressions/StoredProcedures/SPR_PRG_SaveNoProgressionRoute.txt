@@ -1,0 +1,175 @@
+CREATE PROCEDURE [dbo].[SPR_PRG_SaveNoProgressionRoute]
+	@System NVARCHAR(50),
+    @AcademicYear NVARCHAR(5),
+    @StudentRef NVARCHAR(50),
+	@OfferingID INT,
+    @OfferingGroupID INT,
+    @Notes NVARCHAR(255),
+    @Username NVARCHAR(200)
+AS
+BEGIN
+    SET XACT_ABORT, NOCOUNT ON;
+	SET DATEFORMAT ymd
+
+	--DECLARE @System NVARCHAR(50) = 'ProSolution'
+	--DECLARE @StudentRef NVARCHAR(50) = '11151872'
+	--DECLARE @AcademicYear NVARCHAR(5) = '22/23'
+	--DECLARE @OfferingID INT = 39831
+	--DECLARE @OfferingGroupID INT = 47631
+	--DECLARE @Notes NVARCHAR(255) = 'Test'
+	--DECLARE @Username NVARCHAR(200) = 'mis.rwilson'
+
+    DECLARE @SQLString NVARCHAR(MAX);
+    DECLARE @SQLParams NVARCHAR(MAX);
+
+    BEGIN TRY
+        BEGIN TRANSACTION AddNoProgressionRoute
+
+            DECLARE @ErrorMsg NVARCHAR(255) = '';
+
+			DECLARE @RecordExists NVARCHAR(1) = 'N'
+
+			SET @SQLString = 
+                N'SELECT 
+                    @RecordExists = ''Y''
+                FROM WLC.dbo.PRG_NoProgressionRoute NPR 
+                WHERE 
+                    NPR.AcademicYear = @AcademicYear
+					AND NPR.StudentRef = @StudentRef
+					AND NPR.SystemDatabase = @System
+					AND NPR.OfferingID = @OfferingID';
+
+            SET @SQLParams = 
+                N'@AcademicYear NVARCHAR(5),
+                @StudentRef NVARCHAR(50),
+				@System NVARCHAR(50),
+				@OfferingID INT,
+                @RecordExists NVARCHAR(1) OUTPUT';
+
+            EXECUTE sp_executesql 
+                @SQLString, 
+                @SQLParams, 
+                @AcademicYear = @AcademicYear,
+                @StudentRef = @StudentRef,
+				@System = @System,
+				@OfferingID = @OfferingID,
+                @RecordExists = @RecordExists OUTPUT;
+
+			SELECT @RecordExists
+
+			--If record does not exist then insert
+			IF @RecordExists = 'N'
+                BEGIN
+					DECLARE @NoProgressionRouteInserted TABLE (
+                    StudentRef NVARCHAR(50)
+                )
+
+                SET @SQLString = 
+                    N'INSERT INTO WLC.dbo.PRG_NoProgressionRoute
+                    (
+                        AcademicYear,
+						StudentRef,
+						SystemDatabase,
+						OfferingID,
+						OfferingGroupID,
+						Notes,
+						CreatedBy,
+						CreatedDate
+                    )
+                    OUTPUT INSERTED.StudentRef
+                    SELECT
+                        AcademicYear = @AcademicYear,
+						StudentRef = @StudentRef,
+						SystemDatabase = @System,
+						OfferingID = @OfferingID,
+						OfferingGroupID = @OfferingGroupID,
+						Notes = @Notes,
+						CreatedBy = @Username,
+                        CreatedDate = GETDATE()';
+
+                SET @SQLParams = 
+                    N'@AcademicYear NVARCHAR(5),
+                    @StudentRef NVARCHAR(50),
+					@System NVARCHAR(50),
+					@OfferingID INT,
+					@OfferingGroupID INT,
+					@Notes NVARCHAR(255),
+                    @Username NVARCHAR(200)';
+
+                INSERT INTO @NoProgressionRouteInserted
+                EXECUTE sp_executesql 
+                    @SQLString, 
+                    @SQLParams,  
+                    @AcademicYear = @AcademicYear,
+                    @StudentRef = @StudentRef,
+					@System = @System,
+					@OfferingID = @OfferingID,
+					@OfferingGroupID = @OfferingGroupID,
+					@Notes = @Notes,
+                    @Username = @Username; 
+				
+				DECLARE @StudentRefInserted NVARCHAR(50)
+                SET @StudentRefInserted = (SELECT NPI.StudentRef FROM @NoProgressionRouteInserted NPI)
+
+				IF @StudentRefInserted IS NULL
+					BEGIN
+						SET @ErrorMsg = N'Unable to determine Student Ref ID in Academic Year ' + @AcademicYear;
+						RAISERROR ( @ErrorMsg, 16, 1 ) WITH LOG;
+					END
+			END
+
+		ELSE
+			BEGIN
+				SET @SQLString = 
+                    N'UPDATE WLC.dbo.PRG_NoProgressionRoute
+                    SET
+						Notes = @Notes,
+						UpdatedBy = @Username,
+                        UpdatedDate = GETDATE()
+                    WHERE
+                        AcademicYear = @AcademicYear
+						AND StudentRef = @StudentRef
+						AND SystemDatabase = @System
+						AND OfferingID = @OfferingID';
+
+                SET @SQLParams = 
+                    N'@AcademicYear NVARCHAR(5),
+                    @StudentRef NVARCHAR(50),
+					@System NVARCHAR(50),
+					@OfferingID INT,
+					@OfferingGroupID INT,
+					@Notes NVARCHAR(255),
+                    @Username NVARCHAR(200)';
+
+                EXECUTE sp_executesql 
+                    @SQLString, 
+                    @SQLParams,  
+                    @AcademicYear = @AcademicYear,
+                    @StudentRef = @StudentRef,
+					@System = @System,
+					@OfferingID = @OfferingID,
+					@OfferingGroupID = @OfferingGroupID,
+					@Notes = @Notes,
+                    @Username = @Username; 
+			END
+        COMMIT TRANSACTION AddNoProgressionRoute
+    END TRY
+
+    BEGIN CATCH
+        ROLLBACK TRANSACTION AddNoProgressionRoute
+
+        DECLARE @ErrorMessage NVARCHAR(4000);  
+        DECLARE @ErrorSeverity INT;  
+        DECLARE @ErrorState INT;  
+    
+        SELECT   
+            @ErrorMessage = ERROR_MESSAGE(),  
+            @ErrorSeverity = ERROR_SEVERITY(),  
+            @ErrorState = ERROR_STATE();  
+
+        RAISERROR (@ErrorMessage,
+                @ErrorSeverity,
+                @ErrorState
+                );  
+    END CATCH
+END

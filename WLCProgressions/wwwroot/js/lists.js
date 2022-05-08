@@ -190,7 +190,7 @@ function displayCourses(searchType) {
 
                 if (courses[i].enrolments > 0) {
                     htmlData += `
-                            <button type="button" class="btn btn-primary btn-sm ProgressLearnersButton" data-id="${courses[i].courseID}" aria-label="Progression from '${courses[i].courseTitle}' to Another Course" data-target="${courses[i].groupID}" aria-describedby="${courses[i].facCode}" data-parent="${courses[i].teamCode}" aria-labelledby="${courses[i].academicYear}">
+                            <button type="button" class="btn btn-primary btn-sm ProgressLearnersButton" data-id="${courses[i].courseID}" data-path="${courses[i].courseCode}" aria-label="Progression from '${courses[i].courseTitle}' to Another Course" data-target="${courses[i].groupID}" aria-describedby="${courses[i].facCode}" data-parent="${courses[i].teamCode}" aria-labelledby="${courses[i].academicYear}">
                                 <i class="fas fa-users"></i> View Learners...
                             </button>`;
                 }
@@ -214,7 +214,7 @@ function displayCourses(searchType) {
                         <td>${courses[i].courseTitle}</td>
                         <td>${courses[i].groupCode}</td>
                         <td>
-                            <button type="button" class="btn btn-primary btn-sm SelectCourseToProgressButton" data-id="${courses[i].courseID}" data-target="${courses[i].groupID}" aria-describedby="${courses[i].facName}" data-parent="${courses[i].teamName}" aria-label="${courses[i].courseCode}" aria-labelledby="${courses[i].courseTitle}">
+                            <button type="button" class="btn btn-primary btn-sm SelectCourseToProgressButton" data-id="${courses[i].courseID}" data-path="${courses[i].courseCode}" data-target="${courses[i].groupID}" aria-describedby="${courses[i].facName}" data-parent="${courses[i].teamName}" aria-label="${courses[i].courseCode}" aria-labelledby="${courses[i].courseTitle}">
                                 <i class="fas fa-book"></i> Progress to ${courseGroup}
                             </button>
                         </td>
@@ -354,6 +354,7 @@ function listLoadedCourseFromFunctions() {
 
         let facCode = $(this).attr("aria-describedby");
         let teamCode = $(this).attr("data-parent");
+        let courseCode = $(this).attr("data-path");
         let courseID = $(this).attr("data-id");
         let groupID = $(this).attr("data-target");
         let formTitleID = $(this).attr("aria-label");
@@ -364,6 +365,7 @@ function listLoadedCourseFromFunctions() {
         $("#FormTitleID").val(formTitleID);
         $("#CurrentFacCode").val(facCode);
         $("#CurrentTeamCode").val(teamCode);
+        $("#CurrentCourseCode").val(courseCode);
         $("#AcademicYearID").val(academicYear);
 
         displayStudents(system, systemILP, academicYear, progressionYear, courseID, groupID);
@@ -722,34 +724,70 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                     enrolsList = `<ul>${enrolsList}</ul>`;
                 }
 
-                if (students[student].numAppsNextYear > 0) {
-                    appsButton = `
-                    <button type="button" class="btn btn-outline-primary btn-sm LearnerPopover" data-toggle="popover" aria-describedby="${progressionYear} Applications for ${students[student].forename} ${students[student].surname}" data-content="${appsList}">
-                        <i class="fas fa-envelope-open-text"></i> ${students[student].numAppsNextYear}
-                    </button>`;
-                }
-                else {
-                    appsButton = `
-                    <button type="button" class="btn btn-outline-primary btn-sm disabled">
-                        <i class="fas fa-envelope-open-text"></i> ${students[student].numAppsNextYear}
-                    </button>`;
+                let nprCreatedDate = new Date(students[student].noProgressionRouteCreatedDate);
+                let nprCreatedDay = new Intl.DateTimeFormat('en', { day: '2-digit' }).format(nprCreatedDate);
+                let nprCreatedMonth = new Intl.DateTimeFormat('en', { month: 'short' }).format(nprCreatedDate);
+                let nprCreatedYear = new Intl.DateTimeFormat('en', { year: 'numeric' }).format(nprCreatedDate);
+                let noProgressionRouteCreatedDate = `${nprCreatedDay} ${nprCreatedMonth}  ${nprCreatedYear}`;
+
+                let nprUpdatedDate = new Date(students[student].noProgressionRouteUpdatedDate);
+                let nprUpdatedDay = new Intl.DateTimeFormat('en', { day: '2-digit' }).format(nprUpdatedDate);
+                let nprUpdatedMonth = new Intl.DateTimeFormat('en', { month: 'short' }).format(nprUpdatedDate);
+                let nprUpdatedYear = new Intl.DateTimeFormat('en', { year: 'numeric' }).format(nprUpdatedDate);
+                let noProgressionRouteUpdatedDate = `${nprUpdatedDay} ${nprUpdatedMonth}  ${nprUpdatedYear}`;
+
+                let noProgressionRouteNotes = `
+                <blockquote class='blockquote'>
+                    <p class='mb-0'>${students[student].noProgressionRouteReason}</p>
+                    <footer class='blockquote-footer'>Created by ${students[student].noProgressionRouteCreatedBy} on <cite title='Source Date'>${noProgressionRouteCreatedDate}</cite></footer>`;
+
+                if (students[student].noProgressionRouteUpdatedDate !== null) {
+                    noProgressionRouteNotes += `
+                    <footer class='blockquote-footer'>Updated by ${students[student].noProgressionRouteUpdatedBy} on <cite title='Source Date'>${noProgressionRouteUpdatedDate}</cite></footer>`;
                 }
 
-                if (students[student].numEnrolsNextYear > 0) {
-                    enrolsButton = `
-                    <button type="button" class="btn btn-outline-primary btn-sm LearnerPopover" data-toggle="popover" aria-describedby="${progressionYear} Enrolments for ${students[student].forename} ${students[student].surname}" data-content="${enrolsList}">
-                        <i class="fas fa-user-graduate"></i> ${students[student].numEnrolsNextYear}
+                noProgressionRouteNotes += `
+                </blockquote>`;
+
+                let rowClass = ``;
+                if (students[student].noProgressionRoute === 'Y') {
+                    appsButton = `
+                    <button type="button" class="btn btn-outline-danger btn-sm LearnerPopover" data-toggle="popover" aria-describedby="No progression route in ${progressionYear} for ${students[student].forename} ${students[student].surname}" data-content="${noProgressionRouteNotes}">
+                        <i class="fa-solid fa-ban"></i> No
                     </button>`;
+
+                    rowClass = ` class="table-danger"`;
                 }
                 else {
-                    enrolsButton = `
-                    <button type="button" class="btn btn-outline-primary btn-sm disabled">
-                        <i class="fas fa-user-graduate"></i> ${students[student].numEnrolsNextYear}
-                    </button>`;
+                    if (students[student].numAppsNextYear > 0) {
+                        appsButton = `
+                        <button type="button" class="btn btn-outline-primary btn-sm LearnerPopover" data-toggle="popover" aria-describedby="${progressionYear} Applications for ${students[student].forename} ${students[student].surname}" data-content="${appsList}">
+                            <i class="fas fa-envelope-open-text"></i> ${students[student].numAppsNextYear}
+                        </button>`;
+                    }
+                    else {
+                        appsButton = `
+                        <button type="button" class="btn btn-outline-primary btn-sm disabled">
+                            <i class="fas fa-envelope-open-text"></i> ${students[student].numAppsNextYear}
+                        </button>`;
+                    }
+
+                    if (students[student].numEnrolsNextYear > 0) {
+                        enrolsButton = `
+                        <button type="button" class="btn btn-outline-primary btn-sm LearnerPopover" data-toggle="popover" aria-describedby="${progressionYear} Enrolments for ${students[student].forename} ${students[student].surname}" data-content="${enrolsList}">
+                            <i class="fas fa-user-graduate"></i> ${students[student].numEnrolsNextYear}
+                        </button>`;
+                    }
+                    else {
+                        enrolsButton = `
+                        <button type="button" class="btn btn-outline-primary btn-sm disabled">
+                            <i class="fas fa-user-graduate"></i> ${students[student].numEnrolsNextYear}
+                        </button>`;
+                    }
                 }
 
                 htmlData += `
-                        <tr>
+                        <tr${rowClass}>
                             <th scope="row">${students[student].studentRef}</th>
                             <td>${students[student].surname}</td>
                             <td>${students[student].forename}</td>
