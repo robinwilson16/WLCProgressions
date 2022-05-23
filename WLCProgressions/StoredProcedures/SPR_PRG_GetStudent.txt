@@ -14,8 +14,8 @@ BEGIN
 
 	--DECLARE @System VARCHAR(50) = 'ProSolution'
 	--DECLARE @AcademicYear VARCHAR(5) = '21/22'
-	--DECLARE @StudentRef VARCHAR(50) = '11151451'
-	--DECLARE @CourseID INT = 39831
+	--DECLARE @StudentRef VARCHAR(50) = '11132226'
+	--DECLARE @CourseID INT = 43940
 	
 	DECLARE @NextYear VARCHAR(5) = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + '/' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
 	DECLARE @DestinationYear NVARCHAR(5)
@@ -30,127 +30,127 @@ BEGIN
         )
 
     SET @SQLString = 
-    N'SELECT
-		SystemDatabase = @System,
-        AcademicYear = SD.AcademicYearID,
-		CollegeCode = RTRIM ( CGRP.Code ),
-		CollegeName = CGRP.Name,
-		SiteCode = STE.Code,
-		SiteName = STE.Description,
-		FacCode = RTRIM ( FAC.Code ),
-		FacName = FAC.Name,
-		TeamCode = RTRIM ( TEAM.Code ),
-		TeamName = TEAM.Name,
-		CourseCode = CRS.Code,
-		CourseTitle = CRS.Name,
-        StudentRef = RTRIM ( SD.RefNo ),
-		Surname = SD.Surname,
-		Forename = SD.FirstForename,
-		DOB = SD.DateOfBirth,
-		Age31stAug = CAST ( FLOOR ( DATEDIFF ( DAY, COALESCE ( SD.DateOfBirth, CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ), CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ) / 365.23076923074 ) AS int ),
-		CompletionStatusCode = ''1'',
-		CompletionStatusName = ''Continuing'',
-		ClassesCourses = 0,
-        ClassesPlanned = 0,
-        ClassesCounted = 0,
-        ClassesMarked = 0,
-        ClassesUnmarked = 0,
-        ClassesPresent = 0,
-        ClassesAbsent = 0,
-        ClassesNeutral = 0,
-        ClassesAuthAbsence = 0,
-        ClassesLate = 0,
-        AttendPer = CAST ( 0 AS FLOAT ),
-        RiskCode = 0,
-        RiskName = ''No Risk'',
-        RiskColour = ''Green'',
-		OnTrackToAchieveCode = ''Not Set'',
-		OnTrackToAchieveColour = ''Green'',
-		OnTrackToAchieveTerm = ''None'',
-		NumAppsNextYear = 0,
-        AppliedCoursesNextYear = '''',
-        NumEnrolsNextYear = 0,
-        EnrolledCoursesNextYear = '''',
-		NoProgressionRoute = ''N''
-		NoProgressionRouteReason = '''',
-		NoProgressionRouteCreatedDate = GETDATE(),
-		NoProgressionRouteCreatedBy = '',
-		NoProgressionRouteUpdatedDate = NULL,
-		NoProgressionRouteUpdatedBy = '',
-        DestinationCode = DES.LocalDestinationID,
-        DestinationName = DES.Description,
-		DestinationIsActual = CAST ( OC.IsActualDestination AS INT ),
-        DestinationChanged = CAST ( 0 AS bit ),
-		ProgressLearner = CAST ( 0 AS bit ),
-        OfferType = 0,
-        OfferCondition = 0,
-		IsReadyToEnrol = CAST ( 0 AS bit ),
-		ReadyToEnrolOption = '''',
-		HasAlreadyApplied = 
-			CAST ( 
-				CASE
-					WHEN PRG.OfferingID IS NOT NULL THEN 1
-					ELSE 0
-				END
-			AS BIT )
-	FROM ' + @System + '.dbo.StudentDetail SD
-    INNER JOIN ' + @System + '.dbo.Offering CRS
-        ON CRS.OfferingID = @CourseID
-	INNER JOIN ' + @System + '.dbo.Site STE
-		ON STE.SiteID = CRS.SiteID
-	INNER JOIN ' + @System + '.dbo.CollegeLevel TEAM
-		ON TEAM.SID = CRS.SID
-	INNER JOIN ' + @System + '.dbo.CollegeLevel FAC
-		ON FAC.SID = TEAM.ParentSID
-	INNER JOIN ' + @System + '.dbo.CollegeLevel CGRP
-		ON CGRP.SID = FAC.ParentSID
-    LEFT JOIN (
-        SELECT
-            OC.StudentID,
-            OC.LocalDestinationID,
-			OC.IsActualDestination,
-            RowNum = 
-                ROW_NUMBER () OVER (
-                    PARTITION BY
-                        OC.StudentID
-                    ORDER BY
-                        OC.IsActualDestination,
-                        CASE WHEN OC.EndDate IS NULL THEN 1 ELSE 2 END,
-                        OC.CollectionDate DESC,
-                        OC.StartDate DESC
-                )
-        FROM ' + @System + '.dbo.StudentOutcome OC
-        WHERE
-            OC.ReturnYearID = @DestinationYear
-    ) OC
-        ON OC.StudentID = SD.StudentID
-        AND OC.RowNum = 1
-    LEFT JOIN ' + @System + '.dbo.LocalDestination DES
-        ON DES.LocalDestinationID = COALESCE ( OC.LocalDestinationID, SD.LocalDestinationID )
-	LEFT JOIN (
-		SELECT
-			SD.StudentDetailID,
-			APPC.OfferingID,
-			APPC.OfferingGroupID
+		N'SELECT
+			SystemDatabase = @System,
+			AcademicYear = SD.AcademicYearID,
+			CollegeCode = RTRIM ( CGRP.Code ),
+			CollegeName = CGRP.Name,
+			SiteCode = STE.Code,
+			SiteName = STE.Description,
+			FacCode = RTRIM ( FAC.Code ),
+			FacName = FAC.Name,
+			TeamCode = RTRIM ( TEAM.Code ),
+			TeamName = TEAM.Name,
+			CourseCode = CRS.Code,
+			CourseTitle = CRS.Name,
+			StudentRef = RTRIM ( SD.RefNo ),
+			Surname = SD.Surname,
+			Forename = SD.FirstForename,
+			DOB = SD.DateOfBirth,
+			Age31stAug = CAST ( FLOOR ( DATEDIFF ( DAY, COALESCE ( SD.DateOfBirth, CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ), CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ) / 365.23076923074 ) AS int ),
+			CompletionStatusCode = ''1'',
+			CompletionStatusName = ''Continuing'',
+			ClassesCourses = 0,
+			ClassesPlanned = 0,
+			ClassesCounted = 0,
+			ClassesMarked = 0,
+			ClassesUnmarked = 0,
+			ClassesPresent = 0,
+			ClassesAbsent = 0,
+			ClassesNeutral = 0,
+			ClassesAuthAbsence = 0,
+			ClassesLate = 0,
+			AttendPer = CAST ( 0 AS FLOAT ),
+			RiskCode = 0,
+			RiskName = ''No Risk'',
+			RiskColour = ''Green'',
+			OnTrackToAchieveCode = ''Not Set'',
+			OnTrackToAchieveColour = ''Green'',
+			OnTrackToAchieveTerm = ''None'',
+			NumAppsNextYear = 0,
+			AppliedCoursesNextYear = '''',
+			NumEnrolsNextYear = 0,
+			EnrolledCoursesNextYear = '''',
+			NoProgressionRoute = ''N'',
+			NoProgressionRouteReason = '''',
+			NoProgressionRouteCreatedDate = GETDATE(),
+			NoProgressionRouteCreatedBy = '''',
+			NoProgressionRouteUpdatedDate = NULL,
+			NoProgressionRouteUpdatedBy = '''',
+			DestinationCode = DES.LocalDestinationID,
+			DestinationName = DES.Description,
+			DestinationIsActual = CAST ( OC.IsActualDestination AS INT ),
+			DestinationChanged = CAST ( 0 AS bit ),
+			ProgressLearner = CAST ( 0 AS bit ),
+			OfferType = 0,
+			OfferCondition = 0,
+			IsReadyToEnrol = CAST ( 0 AS bit ),
+			ReadyToEnrolOption = '''',
+			HasAlreadyApplied = 
+				CAST ( 
+					CASE
+						WHEN PRG.OfferingID IS NOT NULL THEN 1
+						ELSE 0
+					END
+				AS BIT )
 		FROM ' + @System + '.dbo.StudentDetail SD
-		INNER JOIN ' + @System + '.dbo.Application APP
-			ON APP.StudentDetailID = SD.StudentDetailID
-		INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC
-			ON APPC.ApplicationID = APP.ApplicationID
-			AND APPC.OfferingID = @CourseID
+		INNER JOIN ' + @System + '.dbo.Offering CRS
+			ON CRS.OfferingID = @CourseID
+		INNER JOIN ' + @System + '.dbo.Site STE
+			ON STE.SiteID = CRS.SiteID
+		INNER JOIN ' + @System + '.dbo.CollegeLevel TEAM
+			ON TEAM.SID = CRS.SID
+		INNER JOIN ' + @System + '.dbo.CollegeLevel FAC
+			ON FAC.SID = TEAM.ParentSID
+		INNER JOIN ' + @System + '.dbo.CollegeLevel CGRP
+			ON CGRP.SID = FAC.ParentSID
+		LEFT JOIN (
+			SELECT
+				OC.StudentID,
+				OC.LocalDestinationID,
+				OC.IsActualDestination,
+				RowNum = 
+					ROW_NUMBER () OVER (
+						PARTITION BY
+							OC.StudentID
+						ORDER BY
+							OC.IsActualDestination,
+							CASE WHEN OC.EndDate IS NULL THEN 1 ELSE 2 END,
+							OC.CollectionDate DESC,
+							OC.StartDate DESC
+					)
+			FROM ' + @System + '.dbo.StudentOutcome OC
+			WHERE
+				OC.ReturnYearID = @DestinationYear
+		) OC
+			ON OC.StudentID = SD.StudentID
+			AND OC.RowNum = 1
+		LEFT JOIN ' + @System + '.dbo.LocalDestination DES
+			ON DES.LocalDestinationID = COALESCE ( OC.LocalDestinationID, SD.LocalDestinationID )
+		LEFT JOIN (
+			SELECT
+				SD.StudentDetailID,
+				APPC.OfferingID,
+				APPC.OfferingGroupID
+			FROM ' + @System + '.dbo.StudentDetail SD
+			INNER JOIN ' + @System + '.dbo.Application APP
+				ON APP.StudentDetailID = SD.StudentDetailID
+			INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC
+				ON APPC.ApplicationID = APP.ApplicationID
+				AND APPC.OfferingID = @CourseID
+			WHERE
+				SD.AcademicYearID = @AcademicYear
+				AND SD.RefNo = @StudentRef
+				AND APPC.OfferingID = @CourseID
+		) PRG
+			ON PRG.StudentDetailID = SD.StudentDetailID
 		WHERE
 			SD.AcademicYearID = @AcademicYear
 			AND SD.RefNo = @StudentRef
-			AND APPC.OfferingID = @CourseID
-	) PRG
-		ON PRG.StudentDetailID = SD.StudentDetailID
-	WHERE
-		SD.AcademicYearID = @AcademicYear
-		AND SD.RefNo = @StudentRef
-	ORDER BY
-		SD.Surname,
-		SD.FirstForename,
-		SD.RefNo';
+		ORDER BY
+			SD.Surname,
+			SD.FirstForename,
+			SD.RefNo';
 
     SET @SQLParams = 
         N'@System NVARCHAR(20),

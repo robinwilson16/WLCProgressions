@@ -454,6 +454,7 @@ BEGIN
 			AND CRS.Code NOT LIKE ''%CDF''
 			AND CRS.FranchisingPartnerID IS NULL --Not a partner
 			AND COALESCE ( ENR.Enrolments, 0 ) > 0
+			AND CGRP.Code <> ''00''
 			' + @DrillToArea + '
 		GROUP BY
 			' + @ValueField + ',

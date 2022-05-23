@@ -114,7 +114,7 @@ namespace WLCProgressions.Models
         [Display(Name = "No Progression Route Created Date")]
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
-        public DateTime NoProgressionRouteCreatedDate { get; set; }
+        public DateTime? NoProgressionRouteCreatedDate { get; set; }
 
 
         [Display(Name = "No Progression Route Created By")]
