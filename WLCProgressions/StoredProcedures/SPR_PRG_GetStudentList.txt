@@ -12,8 +12,8 @@ BEGIN
 	--DECLARE @System NVARCHAR(50) = 'ProSolution'
 	--DECLARE @SystemILP NVARCHAR(50) = 'PROMONITOR.ProMonitor'
 	--DECLARE @AcademicYear NVARCHAR(5) = '21/22'
-	--DECLARE @CourseID int = 39831
-	--DECLARE @GroupID int = 47631
+	--DECLARE @CourseID int = 38770
+	--DECLARE @GroupID int = 46323
 
 
 	DECLARE @NextYear VARCHAR(5) = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + '/' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
@@ -31,8 +31,282 @@ BEGIN
     DECLARE @SQLString NVARCHAR(MAX);
     DECLARE @SQLParams NVARCHAR(MAX);
 
+	--Attendance by Learner and Course
 	SET @SQLString = 
-    N'SELECT
+    N'
+	DROP TABLE IF EXISTS #AttendC
+	SELECT
+        SD.StudentDetailID,
+        ENR.OfferingID,
+        ENR.OfferingGroupID,
+        Planned = COUNT ( COALESCE ( RSES.RegisterScheduleID, RSES.RegisterSessionID ) ),
+        Counted = SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 0 ) <> 2 THEN 1 ELSE 0 END ),
+        Marked = SUM ( CASE WHEN RM.MarkTypeID IS NOT NULL THEN 1 ELSE 0 END ),
+        Unmarked = SUM ( CASE WHEN RM.MarkTypeID IS NULL THEN 1 ELSE 0 END ),
+        Present = SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ),
+        Absent = SUM ( CASE WHEN MTS.MarkTypeStatusID = 0 THEN 1 ELSE 0 END ),
+        Neutral = SUM ( CASE WHEN MTS.MarkTypeStatusID = 2 THEN 1 ELSE 0 END ),
+        AuthAbsence = SUM ( CASE WHEN MT.IsAuthorisedAbsence = 1 THEN 1 ELSE 0 END ),
+        Late = SUM ( CASE WHEN MT.IsLate = 1 THEN 1 ELSE 0 END ),
+        AttendPer = 
+            ROUND (
+                CASE
+                    WHEN SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 0 ) <> 2 THEN 1 ELSE 0 END ) = 0 THEN 0
+                    ELSE 
+                        CAST ( SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ) AS FLOAT )
+                        /
+                        CAST ( SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 0 ) <> 2 THEN 1 ELSE 0 END ) AS FLOAT )
+                END
+            , 4 )
+		INTO #AttendC
+    FROM ' + @System + '.dbo.StudentDetail SD
+    INNER JOIN ' + @System + '.dbo.Enrolment ENR
+        ON ENR.StudentDetailID = SD.StudentDetailID
+    INNER JOIN ' + @System + '.dbo.Offering CRS
+        ON CRS.OfferingID = ENR.OfferingID
+    INNER JOIN ' + @System + '.dbo.RegisterStudent REGS
+        ON REGS.EnrolmentID = ENR.EnrolmentID
+    INNER JOIN ' + @System + '.dbo.Register REG
+        ON REG.RegisterID = REGS.RegisterID
+	'
+
+	SET @SQLString += 
+        N'
+    INNER JOIN (
+		SELECT
+			RegisterID = REG.RegisterID,
+			RegisterScheduleID = REGSC.RegisterScheduleID,
+			RegisterSessionID = RSES.RegisterSessionID,
+			Date = REGSC.Date,
+			StartTime = FORMAT ( REGSC.StartTime, ''HH:mm:ss'' ),
+			EndTime = FORMAT ( REGSC.EndTime, ''HH:mm:ss'' ),
+			Duration = REGSC.Duration
+		FROM ' + @System + '.dbo.Register REG
+		INNER JOIN ' + @System + '.dbo.RegisterSchedule REGSC
+			ON REGSC.RegisterID = REG.RegisterID
+		LEFT JOIN ' + @System + '.dbo.RegisterSession RSES
+			ON RSES.RegisterID = REG.RegisterID
+			AND RSES.Date = REGSC.Date
+			AND FORMAT ( RSES.StartTime, ''HH:mm:ss'' ) = FORMAT ( REGSC.StartTime, ''HH:mm:ss'' )
+			AND FORMAT ( RSES.EndTime, ''HH:mm:ss'' ) = FORMAT ( REGSC.EndTime, ''HH:mm:ss'' )
+		WHERE
+			REG.AcademicYearID = @AcademicYear
+	
+		UNION
+
+		SELECT
+			RegisterID = RSES.RegisterID,
+			RegisterScheduleID = REGSC.RegisterScheduleID,
+			RegisterSessionID = RSES.RegisterSessionID,
+			Date = RSES.Date,
+			StartTime = FORMAT ( RSES.StartTime, ''HH:mm:ss'' ),
+			EndTime = FORMAT ( RSES.EndTime, ''HH:mm:ss'' ),
+			Duration = RSES.Duration
+		FROM ' + @System + '.dbo.Register REG
+		INNER JOIN ' + @System + '.dbo.RegisterSession RSES
+			ON RSES.RegisterID = REG.RegisterID
+		LEFT JOIN ' + @System + '.dbo.RegisterSchedule REGSC
+			ON REGSC.RegisterID = REG.RegisterID
+			AND REGSC.Date = RSES.Date
+			AND FORMAT ( REGSC.StartTime, ''HH:mm:ss'' ) = FORMAT ( RSES.StartTime, ''HH:mm:ss'' )
+			AND FORMAT ( REGSC.EndTime, ''HH:mm:ss'' ) = FORMAT ( RSES.EndTime, ''HH:mm:ss'' )
+		WHERE
+			REG.AcademicYearID = @AcademicYear
+	) RSES
+		ON RSES.RegisterID = REG.RegisterID
+	LEFT JOIN ' + @System + '.dbo.RegisterMark AS RM 
+		ON RM.RegisterSessionID = RSES.RegisterSessionID
+		AND RM.RegisterStudentID = REGS.RegisterStudentID
+	LEFT JOIN ' + @System + '.dbo.MarkType AS MT 
+		ON MT.MarkTypeID = RM.MarkTypeID
+	LEFT JOIN ' + @System + '.dbo.MarkTypeStatus MTS
+		ON MTS.MarkTypeStatusID = MT.MarkTypeStatusID
+	LEFT JOIN ' + @System + '.dbo.OfferingGroup GRP
+        ON GRP.OfferingGroupID = ENR.OfferingGroupID
+    WHERE
+        SD.AcademicYearID = @AcademicYear
+        AND CAST ( RSES.Date AS DATE ) <= CAST ( GETDATE() AS DATE )
+    GROUP BY
+        SD.StudentDetailID,
+        ENR.OfferingID,
+        ENR.OfferingGroupID
+	'
+
+	SET @SQLString += 
+        N'
+	--Attendance by Learner
+	DROP TABLE IF EXISTS #Attend
+	SELECT
+		ATT.StudentDetailID,
+		Courses = COUNT ( DISTINCT ATT.OfferingID ),
+		Planned = SUM ( ATT.Planned ),
+        Counted = SUM ( ATT.Counted ),
+        Marked = SUM ( ATT.Marked ),
+        Unmarked = SUM ( ATT.Unmarked ),
+        Present = SUM ( ATT.Present ),
+        Absent = SUM ( ATT.Absent ),
+        Neutral = SUM ( ATT.Neutral ),
+        AuthAbsence = SUM ( ATT.AuthAbsence ),
+        Late = SUM ( ATT.Late ),
+        AttendPer = 
+            ROUND (
+                CASE
+                    WHEN SUM ( ATT.Counted ) = 0 THEN 0
+                    ELSE 
+                        CAST ( SUM ( ATT.Present ) AS FLOAT )
+                        /
+                        CAST ( SUM ( ATT.Counted ) AS FLOAT )
+                END
+            , 4 )
+		INTO #Attend
+	FROM #AttendC ATT
+	GROUP BY
+		ATT.StudentDetailID
+	'
+
+	SET @SQLString += 
+        N'
+	--Risk
+	DROP TABLE IF EXISTS #Risk
+	SELECT
+        StudentRef = S.StudentID,
+        CourseCode = CRS.CourseCode,
+        RiskCode = RSK.EnrolmentAtRiskStatus,
+        RiskName = RSKS.AtRiskStatus,
+        RiskColour = RSKS.Colour
+		INTO #Risk
+    FROM PROMONITOR.ProMonitor.dbo.Student S
+    INNER JOIN PROMONITOR.ProMonitor.dbo.LearnerInformation_AtRisk RSK
+        ON RSK.PMStudentID = S.PMStudentID
+    INNER JOIN PROMONITOR.ProMonitor.dbo.CourseAtRiskStatus RSKS
+        ON RSKS.CourseAtRiskID = RSK.EnrolmentAtRiskStatus
+    INNER JOIN PROMONITOR.ProMonitor.dbo.Enrolment ENR
+        ON ENR.PMEnrolmentID = RSK.PMEnrolmentID
+    INNER JOIN PROMONITOR.ProMonitor.dbo.Course CRS
+        ON CRS.CourseID = ENR.CourseID
+    WHERE
+        S.AcademicYearID = @AcademicYear
+	'
+
+	SET @SQLString += 
+        N'
+	--Not Yet Applied
+	DROP TABLE IF EXISTS #NotYetApplied
+	SELECT 
+		SD.AcademicYearID,
+		SD.StudentID,
+		SD.StudentDetailID,
+		NumApps = COUNT ( CRS.OfferingID ),
+		Courses = 
+			STUFF (
+				(
+					SELECT
+						'', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' )
+					FROM ' + @System + '.dbo.Offering CRS2
+					INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC2
+						ON APPC2.OfferingID = CRS2.OfferingID
+					INNER JOIN ' + @System + '.dbo.Application APP2
+						ON APP2.ApplicationID = APPC2.ApplicationID
+					WHERE
+						CRS2.AcademicYearID = SD.AcademicYearID
+						AND APP2.StudentDetailID = SD.StudentDetailID
+						AND COALESCE ( APP2.CollegeDecisionID, 1 ) <> 0
+						AND COALESCE ( APP2.DecisionID, 1 ) = 1
+					ORDER BY
+						'', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' ) 
+						FOR XML PATH(''''),
+						TYPE
+				).value(''.'',''varchar(max)''), 1, 2, ''''
+			)
+			INTO #NotYetApplied
+	FROM ' + @System + '.dbo.StudentDetail SD
+	INNER JOIN ' + @System + '.dbo.Application APP
+		ON APP.StudentDetailID = SD.StudentDetailID
+	INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC
+		ON APPC.ApplicationID = APP.ApplicationID
+	INNER JOIN ' + @System + '.dbo.Offering CRS
+		ON CRS.OfferingID = APPC.OfferingID
+	WHERE
+		SD.AcademicYearID = @NextYear
+		AND COALESCE ( APP.CollegeDecisionID, 1 ) <> 0
+		AND COALESCE ( APP.DecisionID, 1 ) = 1
+	GROUP BY
+		SD.AcademicYearID,
+		SD.StudentID,
+		SD.StudentDetailID
+	'
+
+	SET @SQLString += 
+        N'
+	--Not Yet Enrolled
+	DROP TABLE IF EXISTS #NotYetEnrolled
+	SELECT 
+        SD.AcademicYearID,
+        SD.StudentID,
+		SD.StudentDetailID,
+        NumEnrols = COUNT ( CRS.OfferingID ),
+        Courses = 
+            STUFF (
+                (
+                        SELECT
+                            '', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' )
+                        FROM ' + @System + '.dbo.Offering CRS2
+                        INNER JOIN ' + @System + '.dbo.Enrolment ENR2
+                            ON ENR2.OfferingID = CRS2.OfferingID
+                        WHERE
+                            CRS2.AcademicYearID = SD.AcademicYearID
+							AND ENR2.StudentDetailID = SD.StudentDetailID
+							AND ENR2.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
+                        ORDER BY
+                            '', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' ) 
+							FOR XML PATH(''''),
+                            TYPE
+                ).value(''.'',''varchar(max)''), 1, 2, ''''
+            )
+			INTO #NotYetEnrolled
+    FROM ' + @System + '.dbo.StudentDetail SD
+    INNER JOIN ' + @System + '.dbo.Enrolment ENR
+        ON ENR.StudentDetailID = SD.StudentDetailID
+    INNER JOIN ' + @System + '.dbo.Offering CRS
+        ON CRS.OfferingID = ENR.OfferingID
+    WHERE
+        SD.AcademicYearID = @NextYear
+        AND ENR.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
+    GROUP BY
+        SD.AcademicYearID,
+        SD.StudentID,
+		SD.StudentDetailID
+	'
+
+	SET @SQLString += 
+        N'
+	--Current Destinations
+	DROP TABLE IF EXISTS #Destinations
+	SELECT
+        OC.StudentID,
+        OC.LocalDestinationID,
+		OC.IsActualDestination,
+        RowNum = 
+            ROW_NUMBER () OVER (
+                PARTITION BY
+                    OC.StudentID
+                ORDER BY
+                    OC.IsActualDestination,
+                    CASE WHEN OC.EndDate IS NULL THEN 1 ELSE 2 END,
+                    OC.CollectionDate DESC,
+                    OC.StartDate DESC
+            )
+			INTO #Destinations
+    FROM ' + @System + '.dbo.StudentOutcome OC
+    WHERE
+        OC.ReturnYearID = @DestinationYear
+
+	'
+
+	SET @SQLString += 
+        N'
+	--Main Query
+	SELECT
 		SystemDatabase = @System,
         AcademicYear = SD.AcademicYearID,
 		CollegeCode = COALESCE ( RTRIM ( CGRP.Code ), ''--UNK--'' ),
@@ -130,338 +404,27 @@ BEGIN
 		ON FAC.SID = TEAM.ParentSID
 	LEFT JOIN ' + @System + '.dbo.CollegeLevel CGRP
 		ON CGRP.SID = FAC.ParentSID
-    LEFT JOIN (
-        SELECT
-            OC.StudentID,
-            OC.LocalDestinationID,
-			OC.IsActualDestination,
-            RowNum = 
-                ROW_NUMBER () OVER (
-                    PARTITION BY
-                        OC.StudentID
-                    ORDER BY
-                        OC.IsActualDestination,
-                        CASE WHEN OC.EndDate IS NULL THEN 1 ELSE 2 END,
-                        OC.CollectionDate DESC,
-                        OC.StartDate DESC
-                )
-        FROM ' + @System + '.dbo.StudentOutcome OC
-        WHERE
-            OC.ReturnYearID = @DestinationYear
-    ) OC
+    LEFT JOIN #Destinations OC
         ON OC.StudentID = SD.StudentID
         AND OC.RowNum = 1
     LEFT JOIN ' + @System + '.dbo.LocalDestination DES
         ON DES.LocalDestinationID = COALESCE ( OC.LocalDestinationID, SD.LocalDestinationID )
-    '
-
-    SET @SQLString += 
-        N'
-    LEFT JOIN (
-        SELECT
-            SD.StudentDetailID,
-			Courses = COUNT ( DISTINCT CRS.OfferingID ),
-            Planned = COUNT ( COALESCE ( RSES.RegisterScheduleID, RSES.RegisterSessionID ) ),
-            Counted = SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 0 ) <> 2 THEN 1 ELSE 0 END ),
-            Marked = SUM ( CASE WHEN RM.MarkTypeID IS NOT NULL THEN 1 ELSE 0 END ),
-            Unmarked = SUM ( CASE WHEN RM.MarkTypeID IS NULL THEN 1 ELSE 0 END ),
-            Present = SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ),
-            Absent = SUM ( CASE WHEN MTS.MarkTypeStatusID = 0 THEN 1 ELSE 0 END ),
-            Neutral = SUM ( CASE WHEN MTS.MarkTypeStatusID = 2 THEN 1 ELSE 0 END ),
-            AuthAbsence = SUM ( CASE WHEN MT.IsAuthorisedAbsence = 1 THEN 1 ELSE 0 END ),
-            Late = SUM ( CASE WHEN MT.IsLate = 1 THEN 1 ELSE 0 END ),
-            AttendPer = 
-                ROUND (
-                    CASE
-                        WHEN SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 0 ) <> 2 THEN 1 ELSE 0 END ) = 0 THEN 0
-                        ELSE 
-                            CAST ( SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ) AS FLOAT )
-                            /
-                            CAST ( SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 0 ) <> 2 THEN 1 ELSE 0 END ) AS FLOAT )
-                    END
-                , 4 )
-        FROM ' + @System + '.dbo.StudentDetail SD
-        INNER JOIN ' + @System + '.dbo.Enrolment ENR
-            ON ENR.StudentDetailID = SD.StudentDetailID
-        INNER JOIN ' + @System + '.dbo.Offering CRS
-            ON CRS.OfferingID = ENR.OfferingID
-        INNER JOIN ' + @System + '.dbo.RegisterStudent REGS
-            ON REGS.EnrolmentID = ENR.EnrolmentID
-        INNER JOIN ' + @System + '.dbo.Register REG
-            ON REG.RegisterID = REGS.RegisterID
-        INNER JOIN (
-			SELECT
-				RegisterID = REG.RegisterID,
-				RegisterScheduleID = REGSC.RegisterScheduleID,
-				RegisterSessionID = RSES.RegisterSessionID,
-				Date = REGSC.Date,
-				StartTime = FORMAT ( REGSC.StartTime, ''HH:mm:ss'' ),
-				EndTime = FORMAT ( REGSC.EndTime, ''HH:mm:ss'' ),
-				Duration = REGSC.Duration
-			FROM ' + @System + '.dbo.Register REG
-			INNER JOIN ' + @System + '.dbo.RegisterSchedule REGSC
-				ON REGSC.RegisterID = REG.RegisterID
-			LEFT JOIN ' + @System + '.dbo.RegisterSession RSES
-				ON RSES.RegisterID = REG.RegisterID
-				AND RSES.Date = REGSC.Date
-				AND FORMAT ( RSES.StartTime, ''HH:mm:ss'' ) = FORMAT ( REGSC.StartTime, ''HH:mm:ss'' )
-				AND FORMAT ( RSES.EndTime, ''HH:mm:ss'' ) = FORMAT ( REGSC.EndTime, ''HH:mm:ss'' )
-			WHERE
-				REG.AcademicYearID = @AcademicYear
-	'
-
-    SET @SQLString += 
-        N'
-			UNION
-
-			SELECT
-				RegisterID = RSES.RegisterID,
-				RegisterScheduleID = REGSC.RegisterScheduleID,
-				RegisterSessionID = RSES.RegisterSessionID,
-				Date = RSES.Date,
-				StartTime = FORMAT ( RSES.StartTime, ''HH:mm:ss'' ),
-				EndTime = FORMAT ( RSES.EndTime, ''HH:mm:ss'' ),
-				Duration = RSES.Duration
-			FROM ' + @System + '.dbo.Register REG
-			INNER JOIN ' + @System + '.dbo.RegisterSession RSES
-				ON RSES.RegisterID = REG.RegisterID
-			LEFT JOIN ' + @System + '.dbo.RegisterSchedule REGSC
-				ON REGSC.RegisterID = REG.RegisterID
-				AND REGSC.Date = RSES.Date
-				AND FORMAT ( REGSC.StartTime, ''HH:mm:ss'' ) = FORMAT ( RSES.StartTime, ''HH:mm:ss'' )
-				AND FORMAT ( REGSC.EndTime, ''HH:mm:ss'' ) = FORMAT ( RSES.EndTime, ''HH:mm:ss'' )
-			WHERE
-				REG.AcademicYearID = @AcademicYear
-		) RSES
-			ON RSES.RegisterID = REG.RegisterID
-		LEFT JOIN ' + @System + '.dbo.RegisterMark AS RM 
-			ON RM.RegisterSessionID = RSES.RegisterSessionID
-			AND RM.RegisterStudentID = REGS.RegisterStudentID
-		LEFT JOIN ' + @System + '.dbo.MarkType AS MT 
-			ON MT.MarkTypeID = RM.MarkTypeID
-		LEFT JOIN ' + @System + '.dbo.MarkTypeStatus MTS
-			ON MTS.MarkTypeStatusID = MT.MarkTypeStatusID
-		LEFT JOIN ' + @System + '.dbo.OfferingGroup GRP
-            ON GRP.OfferingGroupID = ENR.OfferingGroupID
-        WHERE
-            SD.AcademicYearID = @AcademicYear
-            AND CAST ( RSES.Date AS DATE ) <= CAST ( GETDATE() AS DATE )
-        GROUP BY
-            SD.StudentDetailID
-    ) ATT
+    
+    LEFT JOIN #Attend ATT
         ON ATT.StudentDetailID = SD.StudentDetailID
-    '
-
-	SET @SQLString += 
-        N'
-    LEFT JOIN (
-        SELECT
-            SD.StudentDetailID,
-            ENR.OfferingID,
-            ENR.OfferingGroupID,
-            Planned = COUNT ( COALESCE ( RSES.RegisterScheduleID, RSES.RegisterSessionID ) ),
-            Counted = SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 0 ) <> 2 THEN 1 ELSE 0 END ),
-            Marked = SUM ( CASE WHEN RM.MarkTypeID IS NOT NULL THEN 1 ELSE 0 END ),
-            Unmarked = SUM ( CASE WHEN RM.MarkTypeID IS NULL THEN 1 ELSE 0 END ),
-            Present = SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ),
-            Absent = SUM ( CASE WHEN MTS.MarkTypeStatusID = 0 THEN 1 ELSE 0 END ),
-            Neutral = SUM ( CASE WHEN MTS.MarkTypeStatusID = 2 THEN 1 ELSE 0 END ),
-            AuthAbsence = SUM ( CASE WHEN MT.IsAuthorisedAbsence = 1 THEN 1 ELSE 0 END ),
-            Late = SUM ( CASE WHEN MT.IsLate = 1 THEN 1 ELSE 0 END ),
-            AttendPer = 
-                ROUND (
-                    CASE
-                        WHEN SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 0 ) <> 2 THEN 1 ELSE 0 END ) = 0 THEN 0
-                        ELSE 
-                            CAST ( SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ) AS FLOAT )
-                            /
-                            CAST ( SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 0 ) <> 2 THEN 1 ELSE 0 END ) AS FLOAT )
-                    END
-                , 4 )
-        FROM ' + @System + '.dbo.StudentDetail SD
-        INNER JOIN ' + @System + '.dbo.Enrolment ENR
-            ON ENR.StudentDetailID = SD.StudentDetailID
-        INNER JOIN ' + @System + '.dbo.Offering CRS
-            ON CRS.OfferingID = ENR.OfferingID
-        INNER JOIN ' + @System + '.dbo.RegisterStudent REGS
-            ON REGS.EnrolmentID = ENR.EnrolmentID
-        INNER JOIN ' + @System + '.dbo.Register REG
-            ON REG.RegisterID = REGS.RegisterID
-        INNER JOIN (
-			SELECT
-				RegisterID = REG.RegisterID,
-				RegisterScheduleID = REGSC.RegisterScheduleID,
-				RegisterSessionID = RSES.RegisterSessionID,
-				Date = REGSC.Date,
-				StartTime = FORMAT ( REGSC.StartTime, ''HH:mm:ss'' ),
-				EndTime = FORMAT ( REGSC.EndTime, ''HH:mm:ss'' ),
-				Duration = REGSC.Duration
-			FROM ' + @System + '.dbo.Register REG
-			INNER JOIN ' + @System + '.dbo.RegisterSchedule REGSC
-				ON REGSC.RegisterID = REG.RegisterID
-			LEFT JOIN ' + @System + '.dbo.RegisterSession RSES
-				ON RSES.RegisterID = REG.RegisterID
-				AND RSES.Date = REGSC.Date
-				AND FORMAT ( RSES.StartTime, ''HH:mm:ss'' ) = FORMAT ( REGSC.StartTime, ''HH:mm:ss'' )
-				AND FORMAT ( RSES.EndTime, ''HH:mm:ss'' ) = FORMAT ( REGSC.EndTime, ''HH:mm:ss'' )
-			WHERE
-				REG.AcademicYearID = @AcademicYear
-	'
-
-    SET @SQLString += 
-        N'
-			UNION
-
-			SELECT
-				RegisterID = RSES.RegisterID,
-				RegisterScheduleID = REGSC.RegisterScheduleID,
-				RegisterSessionID = RSES.RegisterSessionID,
-				Date = RSES.Date,
-				StartTime = FORMAT ( RSES.StartTime, ''HH:mm:ss'' ),
-				EndTime = FORMAT ( RSES.EndTime, ''HH:mm:ss'' ),
-				Duration = RSES.Duration
-			FROM ' + @System + '.dbo.Register REG
-			INNER JOIN ' + @System + '.dbo.RegisterSession RSES
-				ON RSES.RegisterID = REG.RegisterID
-			LEFT JOIN ' + @System + '.dbo.RegisterSchedule REGSC
-				ON REGSC.RegisterID = REG.RegisterID
-				AND REGSC.Date = RSES.Date
-				AND FORMAT ( REGSC.StartTime, ''HH:mm:ss'' ) = FORMAT ( RSES.StartTime, ''HH:mm:ss'' )
-				AND FORMAT ( REGSC.EndTime, ''HH:mm:ss'' ) = FORMAT ( RSES.EndTime, ''HH:mm:ss'' )
-			WHERE
-				REG.AcademicYearID = @AcademicYear
-		) RSES
-			ON RSES.RegisterID = REG.RegisterID
-		LEFT JOIN ' + @System + '.dbo.RegisterMark AS RM 
-			ON RM.RegisterSessionID = RSES.RegisterSessionID
-			AND RM.RegisterStudentID = REGS.RegisterStudentID
-		LEFT JOIN ' + @System + '.dbo.MarkType AS MT 
-			ON MT.MarkTypeID = RM.MarkTypeID
-		LEFT JOIN ' + @System + '.dbo.MarkTypeStatus MTS
-			ON MTS.MarkTypeStatusID = MT.MarkTypeStatusID
-		LEFT JOIN ' + @System + '.dbo.OfferingGroup GRP
-            ON GRP.OfferingGroupID = ENR.OfferingGroupID
-        WHERE
-            SD.AcademicYearID = @AcademicYear
-            AND CAST ( RSES.Date AS DATE ) <= CAST ( GETDATE() AS DATE )
-        GROUP BY
-            SD.StudentDetailID,
-            ENR.OfferingID,
-            ENR.OfferingGroupID
-    ) ATTC
+    
+    LEFT JOIN #AttendC ATTC
         ON ATTC.StudentDetailID = SD.StudentDetailID
         AND ATTC.OfferingID = ENR.OfferingID
         AND COALESCE ( ATTC.OfferingGroupID, 0 ) = COALESCE ( ENR.OfferingGroupID, 0 )
-    '
-
-    SET @SQLString += 
-        N'
-    LEFT JOIN (
-        SELECT
-            StudentRef = S.StudentID,
-            CourseCode = CRS.CourseCode,
-            RiskCode = RSK.EnrolmentAtRiskStatus,
-            RiskName = RSKS.AtRiskStatus,
-            RiskColour = RSKS.Colour
-        FROM ' + @SystemILP + '.dbo.Student S
-        INNER JOIN ' + @SystemILP + '.dbo.LearnerInformation_AtRisk RSK
-            ON RSK.PMStudentID = S.PMStudentID
-        INNER JOIN ' + @SystemILP + '.dbo.CourseAtRiskStatus RSKS
-            ON RSKS.CourseAtRiskID = RSK.EnrolmentAtRiskStatus
-        INNER JOIN ' + @SystemILP + '.dbo.Enrolment ENR
-            ON ENR.PMEnrolmentID = RSK.PMEnrolmentID
-        INNER JOIN ' + @SystemILP + '.dbo.Course CRS
-            ON CRS.CourseID = ENR.CourseID
-        WHERE
-            S.AcademicYearID = @AcademicYear
-    ) RSK
+    
+    LEFT JOIN #Risk RSK
         ON RSK.StudentRef = SD.RefNo
         AND RSK.CourseCode = CRS.Code
-	LEFT JOIN (
-		SELECT 
-			SD.AcademicYearID,
-			SD.StudentID,
-			SD.StudentDetailID,
-			NumApps = COUNT ( CRS.OfferingID ),
-			Courses = 
-				STUFF (
-					(
-						SELECT
-							'', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' )
-						FROM ' + @System + '.dbo.Offering CRS2
-						INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC2
-							ON APPC2.OfferingID = CRS2.OfferingID
-						INNER JOIN ' + @System + '.dbo.Application APP2
-							ON APP2.ApplicationID = APPC2.ApplicationID
-						WHERE
-							CRS2.AcademicYearID = SD.AcademicYearID
-							AND APP2.StudentDetailID = SD.StudentDetailID
-							AND COALESCE ( APP2.CollegeDecisionID, 1 ) <> 0
-							AND COALESCE ( APP2.DecisionID, 1 ) = 1
-						ORDER BY
-							'', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' ) 
-							FOR XML PATH(''''),
-							TYPE
-					).value(''.'',''varchar(max)''), 1, 2, ''''
-				)
-		FROM ' + @System + '.dbo.StudentDetail SD
-		INNER JOIN ' + @System + '.dbo.Application APP
-			ON APP.StudentDetailID = SD.StudentDetailID
-		INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC
-			ON APPC.ApplicationID = APP.ApplicationID
-		INNER JOIN ' + @System + '.dbo.Offering CRS
-			ON CRS.OfferingID = APPC.OfferingID
-		WHERE
-			SD.AcademicYearID = @NextYear
-			AND COALESCE ( APP.CollegeDecisionID, 1 ) <> 0
-			AND COALESCE ( APP.DecisionID, 1 ) = 1
-		GROUP BY
-			SD.AcademicYearID,
-			SD.StudentID,
-			SD.StudentDetailID
-	) NYA
+	LEFT JOIN #NotYetApplied NYA
         ON NYA.StudentID = SD.StudentID
-	'
-
-    SET @SQLString += 
-        N'
-    LEFT JOIN (
-        SELECT 
-            SD.AcademicYearID,
-            SD.StudentID,
-			SD.StudentDetailID,
-            NumEnrols = COUNT ( CRS.OfferingID ),
-            Courses = 
-                STUFF (
-                    (
-                            SELECT
-                                '', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' )
-                            FROM ' + @System + '.dbo.Offering CRS2
-                            INNER JOIN ' + @System + '.dbo.Enrolment ENR2
-                                ON ENR2.OfferingID = CRS2.OfferingID
-                            WHERE
-                                CRS2.AcademicYearID = SD.AcademicYearID
-								AND ENR2.StudentDetailID = SD.StudentDetailID
-								AND ENR2.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
-                            ORDER BY
-                                '', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' ) 
-								FOR XML PATH(''''),
-                                TYPE
-                    ).value(''.'',''varchar(max)''), 1, 2, ''''
-                )
-        FROM ' + @System + '.dbo.StudentDetail SD
-        INNER JOIN ' + @System + '.dbo.Enrolment ENR
-            ON ENR.StudentDetailID = SD.StudentDetailID
-        INNER JOIN ' + @System + '.dbo.Offering CRS
-            ON CRS.OfferingID = ENR.OfferingID
-        WHERE
-            SD.AcademicYearID = @NextYear
-            AND ENR.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
-        GROUP BY
-            SD.AcademicYearID,
-            SD.StudentID,
-			SD.StudentDetailID
-    ) NYE
+	
+    LEFT JOIN #NotYetEnrolled NYE
         ON NYE.StudentID = SD.StudentID
 	LEFT JOIN WLC.dbo.PRG_NoProgressionRoute NPR
 		ON NPR.StudentRef = SD.RefNo
@@ -478,7 +441,7 @@ BEGIN
 		SD.Surname,
 		SD.FirstForename,
 		SD.RefNo
-	';
+	'
 
 	--SELECT @SQLString AS [processing-instruction(x)] FOR XML PATH('')
 
