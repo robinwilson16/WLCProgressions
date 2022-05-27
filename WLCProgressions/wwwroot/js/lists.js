@@ -6,8 +6,12 @@ var numPages = 1;
 var curPage = 1;
 var numItems = 10;
 
+var loadingBox = document.getElementById('LoadingAnimation');
+
 function loadAllCourses(system, academicYear, showCoursesWithoutEnrols) {
     return new Promise(resolve => {
+        loadingBox.style.visibility = "visible";
+
         let dataToLoad = `/CourseGroups/?handler=Json&academicYear=${academicYear}&showCoursesWithoutEnrols=${showCoursesWithoutEnrols}`;
 
         if (system !== "") {
@@ -23,18 +27,21 @@ function loadAllCourses(system, academicYear, showCoursesWithoutEnrols) {
 
                 try {
                     localStorage.setItem("courses", JSON.stringify(data));
+                    loadingBox.style.visibility = "collapse";
                     console.log(dataToLoad + " Loaded");
                     resolve(1);
                 }
                 catch (e) {
                     doErrorModal("Error Storing Data in Browser", "Sorry an error occurred storing data in your web browser. Please check the local storage settings and your available disk space.");
+                    loadingBox.style.visibility = "collapse";
                     resolve(0);
                 }
             })
             .fail(function () {
+                loadingBox.style.visibility = "collapse";
+
                 let title = `Error Loading Courses`;
                 let content = `Sorry an error occurred loading the list of courses. Please try again.`;
-
                 doErrorModal(title, content);
             });
     });
@@ -598,6 +605,7 @@ function checkOfferDetails() {
 }
 
 function displayStudents(system, systemILP, academicYear, progressionYear, courseID, groupID) {
+    loadingBox.style.visibility = "visible";
     let dataToLoad = "";
 
     if (groupID <= 0) {
@@ -621,6 +629,7 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
                 localStorage.setItem("students", JSON.stringify(students));
             }
             catch (e) {
+                loadingBox.style.visibility = "collapse";
                 doErrorModal("Error Storing Data in Browser", "Sorry an error occurred storing data in your web browser. Please check the local storage settings and your available disk space.");
             }
 
@@ -844,14 +853,16 @@ function displayStudents(system, systemILP, academicYear, progressionYear, cours
 
             $("#StudentFromArea").html(htmlData);
 
+            loadingBox.style.visibility = "collapse";
             console.log(dataToLoad + " Loaded");
 
             listLoadedStudentFunctions();
         })
         .fail(function () {
+            loadingBox.style.visibility = "collapse";
+
             let title = `Error Loading Learners`;
             let content = `Sorry an error occurred loading the list of learners. Please try again.`;
-
             doErrorModal(title, content);
         });
 }

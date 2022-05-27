@@ -6,14 +6,13 @@ CREATE PROCEDURE [dbo].[SPR_PRG_GetStudentList]
 	@GroupID int
 AS
 BEGIN
-	SET XACT_ABORT, NOCOUNT ON;
 	SET DATEFORMAT ymd;
 
 	--DECLARE @System NVARCHAR(50) = 'ProSolution'
 	--DECLARE @SystemILP NVARCHAR(50) = 'PROMONITOR.ProMonitor'
 	--DECLARE @AcademicYear NVARCHAR(5) = '21/22'
-	--DECLARE @CourseID int = 38770
-	--DECLARE @GroupID int = 46323
+	--DECLARE @CourseID int = 38740
+	--DECLARE @GroupID int = 46284
 
 
 	DECLARE @NextYear VARCHAR(5) = CAST ( CAST ( LEFT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) ) + '/' + CAST ( CAST ( RIGHT ( @AcademicYear, 2 ) AS INT ) + 1 AS VARCHAR(2) )
@@ -28,18 +27,76 @@ BEGIN
                     END 
         )
 
-    DECLARE @SQLString NVARCHAR(MAX);
-    DECLARE @SQLParams NVARCHAR(MAX);
 
-	--Attendance by Learner and Course
-	SET @SQLString = 
-    N'
+	DROP TABLE IF EXISTS #RegisterSession
+	SELECT
+		REG.RegisterID,
+		RSES.RegisterSessionID,
+		RSES.SessionNo,
+		RSES.Date,
+		RSES.StartTime,
+		RSES.EndTime
+		INTO #RegisterSession
+	FROM ProSolution.dbo.Register REG
+	INNER JOIN ProSolution.dbo.RegisterSession RSES
+		ON RSES.RegisterID = REG.RegisterID
+	WHERE
+		REG.AcademicYearID = @AcademicYear
+
+	UNION
+
+	SELECT
+		REGSC.RegisterID,
+		RegisterSessionID = 0 - REGSC.RegisterScheduleID,
+		SessionNo = 
+			1 
+			+ RS.SessionCount 
+			+ (
+				SELECT COUNT(*) 
+				FROM ProSolution.dbo.RegisterSchedule RSch2
+				WHERE 
+					RSch2.RegisterID = REGSC.RegisterID 
+					AND CAST(RSch2.Date AS DATETIME) + CAST(RSch2.StartTime AS DATETIME) > RS.MaxDate 
+					AND CAST(RSch2.Date AS DATETIME) + CAST(RSch2.StartTime AS DATETIME) < CAST(REGSC.Date AS DATETIME) + CAST(REGSC.StartTime AS DATETIME)
+			),
+		REGSC.Date,
+		REGSC.StartTime,
+		REGSC.EndTime
+	FROM ProSolution.dbo.Register REG
+	INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+		ON REGSC.RegisterID = REG.RegisterID
+	INNER JOIN (
+		SELECT 
+			REG.RegisterID, 
+			SessionCount = COUNT(*), 
+			MaxDate = MAX(CAST(RSES.Date AS DATETIME) + CAST(RSES.StartTime AS DATETIME))
+		FROM ProSolution.dbo.Register REG
+		LEFT JOIN ProSolution.dbo.RegisterSession RSES
+			ON RSES.RegisterID = REG.RegisterID
+		GROUP BY 
+			REG.RegisterID
+	) RS
+		ON REGSC.RegisterID = RS.RegisterID
+	WHERE
+		REG.AcademicYearID = @AcademicYear
+		AND CAST(REGSC.Date AS DATETIME) + CAST(REGSC.StartTime AS DATETIME) > COALESCE ( MaxDate, DATEADD ( DAY, -1, CAST(REGSC.Date AS DATETIME) + CAST(REGSC.StartTime AS DATETIME) ) )
+
+	ALTER TABLE #RegisterSession
+	ALTER COLUMN RegisterID INT NOT NULL
+	ALTER TABLE #RegisterSession
+	ALTER COLUMN RegisterSessionID INT NOT NULL
+	ALTER TABLE #RegisterSession
+	ALTER COLUMN SessionNo INT NOT NULL
+	ALTER TABLE #RegisterSession
+	ADD PRIMARY KEY (RegisterID, RegisterSessionID, SessionNo);
+
+
 	DROP TABLE IF EXISTS #AttendC
 	SELECT
         SD.StudentDetailID,
         ENR.OfferingID,
         ENR.OfferingGroupID,
-        Planned = COUNT ( COALESCE ( RSES.RegisterScheduleID, RSES.RegisterSessionID ) ),
+        Planned = COUNT ( RSES.RegisterID ),
         Counted = SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 0 ) <> 2 THEN 1 ELSE 0 END ),
         Marked = SUM ( CASE WHEN RM.MarkTypeID IS NOT NULL THEN 1 ELSE 0 END ),
         Unmarked = SUM ( CASE WHEN RM.MarkTypeID IS NULL THEN 1 ELSE 0 END ),
@@ -59,69 +116,25 @@ BEGIN
                 END
             , 4 )
 		INTO #AttendC
-    FROM ' + @System + '.dbo.StudentDetail SD
-    INNER JOIN ' + @System + '.dbo.Enrolment ENR
+    FROM ProSolution.dbo.StudentDetail SD
+    INNER JOIN ProSolution.dbo.Enrolment ENR
         ON ENR.StudentDetailID = SD.StudentDetailID
-    INNER JOIN ' + @System + '.dbo.Offering CRS
+    INNER JOIN ProSolution.dbo.Offering CRS
         ON CRS.OfferingID = ENR.OfferingID
-    INNER JOIN ' + @System + '.dbo.RegisterStudent REGS
+    INNER JOIN ProSolution.dbo.RegisterStudent REGS
         ON REGS.EnrolmentID = ENR.EnrolmentID
-    INNER JOIN ' + @System + '.dbo.Register REG
+    INNER JOIN ProSolution.dbo.Register REG
         ON REG.RegisterID = REGS.RegisterID
-	'
-
-	SET @SQLString += 
-        N'
-    INNER JOIN (
-		SELECT
-			RegisterID = REG.RegisterID,
-			RegisterScheduleID = REGSC.RegisterScheduleID,
-			RegisterSessionID = RSES.RegisterSessionID,
-			Date = REGSC.Date,
-			StartTime = FORMAT ( REGSC.StartTime, ''HH:mm:ss'' ),
-			EndTime = FORMAT ( REGSC.EndTime, ''HH:mm:ss'' ),
-			Duration = REGSC.Duration
-		FROM ' + @System + '.dbo.Register REG
-		INNER JOIN ' + @System + '.dbo.RegisterSchedule REGSC
-			ON REGSC.RegisterID = REG.RegisterID
-		LEFT JOIN ' + @System + '.dbo.RegisterSession RSES
-			ON RSES.RegisterID = REG.RegisterID
-			AND RSES.Date = REGSC.Date
-			AND FORMAT ( RSES.StartTime, ''HH:mm:ss'' ) = FORMAT ( REGSC.StartTime, ''HH:mm:ss'' )
-			AND FORMAT ( RSES.EndTime, ''HH:mm:ss'' ) = FORMAT ( REGSC.EndTime, ''HH:mm:ss'' )
-		WHERE
-			REG.AcademicYearID = @AcademicYear
-	
-		UNION
-
-		SELECT
-			RegisterID = RSES.RegisterID,
-			RegisterScheduleID = REGSC.RegisterScheduleID,
-			RegisterSessionID = RSES.RegisterSessionID,
-			Date = RSES.Date,
-			StartTime = FORMAT ( RSES.StartTime, ''HH:mm:ss'' ),
-			EndTime = FORMAT ( RSES.EndTime, ''HH:mm:ss'' ),
-			Duration = RSES.Duration
-		FROM ' + @System + '.dbo.Register REG
-		INNER JOIN ' + @System + '.dbo.RegisterSession RSES
-			ON RSES.RegisterID = REG.RegisterID
-		LEFT JOIN ' + @System + '.dbo.RegisterSchedule REGSC
-			ON REGSC.RegisterID = REG.RegisterID
-			AND REGSC.Date = RSES.Date
-			AND FORMAT ( REGSC.StartTime, ''HH:mm:ss'' ) = FORMAT ( RSES.StartTime, ''HH:mm:ss'' )
-			AND FORMAT ( REGSC.EndTime, ''HH:mm:ss'' ) = FORMAT ( RSES.EndTime, ''HH:mm:ss'' )
-		WHERE
-			REG.AcademicYearID = @AcademicYear
-	) RSES
+    INNER JOIN #RegisterSession RSES
 		ON RSES.RegisterID = REG.RegisterID
-	LEFT JOIN ' + @System + '.dbo.RegisterMark AS RM 
+	LEFT JOIN ProSolution.dbo.RegisterMark AS RM 
 		ON RM.RegisterSessionID = RSES.RegisterSessionID
 		AND RM.RegisterStudentID = REGS.RegisterStudentID
-	LEFT JOIN ' + @System + '.dbo.MarkType AS MT 
+	LEFT JOIN ProSolution.dbo.MarkType AS MT 
 		ON MT.MarkTypeID = RM.MarkTypeID
-	LEFT JOIN ' + @System + '.dbo.MarkTypeStatus MTS
+	LEFT JOIN ProSolution.dbo.MarkTypeStatus MTS
 		ON MTS.MarkTypeStatusID = MT.MarkTypeStatusID
-	LEFT JOIN ' + @System + '.dbo.OfferingGroup GRP
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
         ON GRP.OfferingGroupID = ENR.OfferingGroupID
     WHERE
         SD.AcademicYearID = @AcademicYear
@@ -130,10 +143,8 @@ BEGIN
         SD.StudentDetailID,
         ENR.OfferingID,
         ENR.OfferingGroupID
-	'
 
-	SET @SQLString += 
-        N'
+
 	--Attendance by Learner
 	DROP TABLE IF EXISTS #Attend
 	SELECT
@@ -162,10 +173,7 @@ BEGIN
 	FROM #AttendC ATT
 	GROUP BY
 		ATT.StudentDetailID
-	'
-
-	SET @SQLString += 
-        N'
+	
 	--Risk
 	DROP TABLE IF EXISTS #Risk
 	SELECT
@@ -186,10 +194,7 @@ BEGIN
         ON CRS.CourseID = ENR.CourseID
     WHERE
         S.AcademicYearID = @AcademicYear
-	'
-
-	SET @SQLString += 
-        N'
+	
 	--Not Yet Applied
 	DROP TABLE IF EXISTS #NotYetApplied
 	SELECT 
@@ -201,11 +206,11 @@ BEGIN
 			STUFF (
 				(
 					SELECT
-						'', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' )
-					FROM ' + @System + '.dbo.Offering CRS2
-					INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC2
+						', ' + CRS2.Code + ' - ' + REPLACE ( CRS2.Name, ',', '&#44;' )
+					FROM ProSolution.dbo.Offering CRS2
+					INNER JOIN ProSolution.dbo.ApplicationCourse APPC2
 						ON APPC2.OfferingID = CRS2.OfferingID
-					INNER JOIN ' + @System + '.dbo.Application APP2
+					INNER JOIN ProSolution.dbo.Application APP2
 						ON APP2.ApplicationID = APPC2.ApplicationID
 					WHERE
 						CRS2.AcademicYearID = SD.AcademicYearID
@@ -213,18 +218,18 @@ BEGIN
 						AND COALESCE ( APP2.CollegeDecisionID, 1 ) <> 0
 						AND COALESCE ( APP2.DecisionID, 1 ) = 1
 					ORDER BY
-						'', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' ) 
-						FOR XML PATH(''''),
+						', ' + CRS2.Code + ' - ' + REPLACE ( CRS2.Name, ',', '&#44;' ) 
+						FOR XML PATH(''),
 						TYPE
-				).value(''.'',''varchar(max)''), 1, 2, ''''
+				).value('.','varchar(max)'), 1, 2, ''
 			)
 			INTO #NotYetApplied
-	FROM ' + @System + '.dbo.StudentDetail SD
-	INNER JOIN ' + @System + '.dbo.Application APP
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Application APP
 		ON APP.StudentDetailID = SD.StudentDetailID
-	INNER JOIN ' + @System + '.dbo.ApplicationCourse APPC
+	INNER JOIN ProSolution.dbo.ApplicationCourse APPC
 		ON APPC.ApplicationID = APP.ApplicationID
-	INNER JOIN ' + @System + '.dbo.Offering CRS
+	INNER JOIN ProSolution.dbo.Offering CRS
 		ON CRS.OfferingID = APPC.OfferingID
 	WHERE
 		SD.AcademicYearID = @NextYear
@@ -234,10 +239,7 @@ BEGIN
 		SD.AcademicYearID,
 		SD.StudentID,
 		SD.StudentDetailID
-	'
-
-	SET @SQLString += 
-        N'
+	
 	--Not Yet Enrolled
 	DROP TABLE IF EXISTS #NotYetEnrolled
 	SELECT 
@@ -249,37 +251,34 @@ BEGIN
             STUFF (
                 (
                         SELECT
-                            '', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' )
-                        FROM ' + @System + '.dbo.Offering CRS2
-                        INNER JOIN ' + @System + '.dbo.Enrolment ENR2
+                            ', ' + CRS2.Code + ' - ' + REPLACE ( CRS2.Name, ',', '&#44;' )
+                        FROM ProSolution.dbo.Offering CRS2
+                        INNER JOIN ProSolution.dbo.Enrolment ENR2
                             ON ENR2.OfferingID = CRS2.OfferingID
                         WHERE
                             CRS2.AcademicYearID = SD.AcademicYearID
 							AND ENR2.StudentDetailID = SD.StudentDetailID
-							AND ENR2.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
+							AND ENR2.CompletionStatusID IN ( '1', '2', '3' )
                         ORDER BY
-                            '', '' + CRS2.Code + '' - '' + REPLACE ( CRS2.Name, '','', ''&#44;'' ) 
-							FOR XML PATH(''''),
+                            ', ' + CRS2.Code + ' - ' + REPLACE ( CRS2.Name, ',', '&#44;' ) 
+							FOR XML PATH(''),
                             TYPE
-                ).value(''.'',''varchar(max)''), 1, 2, ''''
+                ).value('.','varchar(max)'), 1, 2, ''
             )
 			INTO #NotYetEnrolled
-    FROM ' + @System + '.dbo.StudentDetail SD
-    INNER JOIN ' + @System + '.dbo.Enrolment ENR
+    FROM ProSolution.dbo.StudentDetail SD
+    INNER JOIN ProSolution.dbo.Enrolment ENR
         ON ENR.StudentDetailID = SD.StudentDetailID
-    INNER JOIN ' + @System + '.dbo.Offering CRS
+    INNER JOIN ProSolution.dbo.Offering CRS
         ON CRS.OfferingID = ENR.OfferingID
     WHERE
         SD.AcademicYearID = @NextYear
-        AND ENR.CompletionStatusID IN ( ''1'', ''2'', ''3'' )
+        AND ENR.CompletionStatusID IN ( '1', '2', '3' )
     GROUP BY
         SD.AcademicYearID,
         SD.StudentID,
 		SD.StudentDetailID
-	'
-
-	SET @SQLString += 
-        N'
+	
 	--Current Destinations
 	DROP TABLE IF EXISTS #Destinations
 	SELECT
@@ -297,24 +296,21 @@ BEGIN
                     OC.StartDate DESC
             )
 			INTO #Destinations
-    FROM ' + @System + '.dbo.StudentOutcome OC
+    FROM ProSolution.dbo.StudentOutcome OC
     WHERE
         OC.ReturnYearID = @DestinationYear
 
-	'
-
-	SET @SQLString += 
-        N'
+	
 	--Main Query
 	SELECT
 		SystemDatabase = @System,
         AcademicYear = SD.AcademicYearID,
-		CollegeCode = COALESCE ( RTRIM ( CGRP.Code ), ''--UNK--'' ),
-		CollegeName = COALESCE ( CGRP.Name, ''--Unknown--'' ),
+		CollegeCode = COALESCE ( RTRIM ( CGRP.Code ), '--UNK--' ),
+		CollegeName = COALESCE ( CGRP.Name, '--Unknown--' ),
 		SiteCode = STE.Code,
 		SiteName = STE.Description,
-		FacCode = COALESCE ( RTRIM ( FAC.Code ), ''--UNK--'' ),
-		FacName = COALESCE ( FAC.Name, ''--Unknown--'' ),
+		FacCode = COALESCE ( RTRIM ( FAC.Code ), '--UNK--' ),
+		FacName = COALESCE ( FAC.Name, '--Unknown--' ),
 		TeamCode = RTRIM ( TEAM.Code ),
 		TeamName = TEAM.Name,
 		CourseCode = CRS.Code,
@@ -323,7 +319,7 @@ BEGIN
 		Surname = SD.Surname,
 		Forename = SD.FirstForename,
 		DOB = SD.DateOfBirth,
-		Age31stAug = CAST ( FLOOR ( DATEDIFF ( DAY, COALESCE ( SD.DateOfBirth, CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ), CAST ( ''20'' + LEFT ( SD.AcademicYearID, 2 ) + ''-09-01'' AS DATETIME2 ) ) / 365.23076923074 ) AS int ),
+		Age31stAug = CAST ( FLOOR ( DATEDIFF ( DAY, COALESCE ( SD.DateOfBirth, CAST ( '20' + LEFT ( SD.AcademicYearID, 2 ) + '-09-01' AS DATETIME2 ) ), CAST ( '20' + LEFT ( SD.AcademicYearID, 2 ) + '-09-01' AS DATETIME2 ) ) / 365.23076923074 ) AS int ),
 		CompletionStatusCode = ENR.CompletionStatusID,
 		CompletionStatusName = CMP.Description,
 		ClassesCourses = COALESCE ( ATT.Courses, 0 ),
@@ -338,22 +334,22 @@ BEGIN
         ClassesLate = COALESCE ( ATT.Late, 0 ),
         AttendPer = CAST ( COALESCE ( ATT.AttendPer, 0 ) AS FLOAT ),
         RiskCode = COALESCE ( RSK.RiskCode, 0 ),
-        RiskName = COALESCE ( RSK.RiskName, ''Risk Not Set''),
-        RiskColour = COALESCE ( RSK.RiskColour, ''Red'' ),
-		OnTrackToAchieveCode = COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8, ''Not Set'' ),
+        RiskName = COALESCE ( RSK.RiskName, 'Risk Not Set'),
+        RiskColour = COALESCE ( RSK.RiskColour, 'Red' ),
+		OnTrackToAchieveCode = COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8, 'Not Set' ),
 		OnTrackToAchieveColour = 
 			CASE
-				WHEN COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8 ) = ''R'' THEN ''Red''
-				WHEN COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8 ) = ''A'' THEN ''Orange''
-				WHEN COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8 ) = ''G'' THEN ''Green''
-				ELSE ''Red''
+				WHEN COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8 ) = 'R' THEN 'Red'
+				WHEN COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8 ) = 'A' THEN 'Orange'
+				WHEN COALESCE ( ENR.UserDefined10, ENR.UserDefined9, ENR.UserDefined8 ) = 'G' THEN 'Green'
+				ELSE 'Red'
 			END,
 		OnTrackToAchieveTerm = 
 			CASE
-				WHEN ENR.UserDefined10 IS NOT NULL THEN ''Term 3''
-				WHEN ENR.UserDefined9 IS NOT NULL THEN ''Term 2''
-				WHEN ENR.UserDefined8 IS NOT NULL THEN ''Term 1''
-				ELSE ''None''
+				WHEN ENR.UserDefined10 IS NOT NULL THEN 'Term 3'
+				WHEN ENR.UserDefined9 IS NOT NULL THEN 'Term 2'
+				WHEN ENR.UserDefined8 IS NOT NULL THEN 'Term 1'
+				ELSE 'None'
 			END,
 		NumAppsNextYear = COALESCE ( NYA.NumApps, 0 ),
         AppliedCoursesNextYear = NYA.Courses,
@@ -365,10 +361,10 @@ BEGIN
 					CASE
 						WHEN COALESCE ( NYA.NumApps, 0 ) = 0
 						AND COALESCE ( NYE.NumEnrols, 0 ) = 0
-							THEN ''Y''
-						ELSE ''N''
+							THEN 'Y'
+						ELSE 'N'
 					END
-				ELSE ''N''
+				ELSE 'N'
 			END,
 		NoProgressionRouteReason = NPR.Notes,
 		NoProgressionRouteCreatedDate = NPR.CreatedDate,
@@ -383,31 +379,28 @@ BEGIN
         OfferType = 0,
         OfferCondition = 0,
 		IsReadyToEnrol = CAST ( 0 AS bit ),
-		ReadyToEnrolOption = '''',
+		ReadyToEnrolOption = '',
 		HasAlreadyApplied = CAST ( 0 AS bit )
-	'
-
-    SET @SQLString += 
-        N'
-	FROM ' + @System + '.dbo.StudentDetail SD
-	INNER JOIN ' + @System + '.dbo.Enrolment ENR
+	
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
 		ON ENR.StudentDetailID = SD.StudentDetailID
-    INNER JOIN ' + @System + '.dbo.Offering CRS
+    INNER JOIN ProSolution.dbo.Offering CRS
         ON CRS.OfferingID = ENR.OfferingID
-	INNER JOIN ' + @System + '.dbo.CompletionStatus CMP
+	INNER JOIN ProSolution.dbo.CompletionStatus CMP
 		ON CMP.CompletionStatusID = ENR.CompletionStatusID
-	INNER JOIN ' + @System + '.dbo.Site STE
+	INNER JOIN ProSolution.dbo.Site STE
 		ON STE.SiteID = CRS.SiteID
-	INNER JOIN ' + @System + '.dbo.CollegeLevel TEAM
+	INNER JOIN ProSolution.dbo.CollegeLevel TEAM
 		ON TEAM.SID = CRS.SID
-	LEFT JOIN ' + @System + '.dbo.CollegeLevel FAC
+	LEFT JOIN ProSolution.dbo.CollegeLevel FAC
 		ON FAC.SID = TEAM.ParentSID
-	LEFT JOIN ' + @System + '.dbo.CollegeLevel CGRP
+	LEFT JOIN ProSolution.dbo.CollegeLevel CGRP
 		ON CGRP.SID = FAC.ParentSID
     LEFT JOIN #Destinations OC
         ON OC.StudentID = SD.StudentID
         AND OC.RowNum = 1
-    LEFT JOIN ' + @System + '.dbo.LocalDestination DES
+    LEFT JOIN ProSolution.dbo.LocalDestination DES
         ON DES.LocalDestinationID = COALESCE ( OC.LocalDestinationID, SD.LocalDestinationID )
     
     LEFT JOIN #Attend ATT
@@ -430,38 +423,15 @@ BEGIN
 		ON NPR.StudentRef = SD.RefNo
 		AND NPR.AcademicYear = @NextYear
 		AND NPR.OfferingID = CRS.OfferingID
-		AND NPR.SystemDatabase = ''' + @System + '''
+		AND NPR.SystemDatabase = 'ProSolution'
 	WHERE
 		SD.AcademicYearID = @AcademicYear
-		AND ENR.CompletionStatusID IN ( ''1'', ''2'' )
-		AND COALESCE ( ENR.ActualEndDate, ENR.ExpectedEndDate ) BETWEEN ''20'' + LEFT ( @AcademicYear, 2 ) + ''-08-01'' AND ''20'' + RIGHT ( @AcademicYear, 2 ) + ''-07-31''
+		AND ENR.CompletionStatusID IN ( '1', '2' )
+		AND COALESCE ( ENR.ActualEndDate, ENR.ExpectedEndDate ) BETWEEN '20' + LEFT ( @AcademicYear, 2 ) + '-08-01' AND '20' + RIGHT ( @AcademicYear, 2 ) + '-07-31'
 		AND ENR.OfferingID = @CourseID
 		AND COALESCE ( ENR.OfferingGroupID, 0 ) = COALESCE ( @GroupID, 0 )
 	ORDER BY
 		SD.Surname,
 		SD.FirstForename,
 		SD.RefNo
-	'
-
-	--SELECT @SQLString AS [processing-instruction(x)] FOR XML PATH('')
-
-    SET @SQLParams = 
-        N'@System NVARCHAR(50),
-        @SystemILP NVARCHAR(50),
-        @AcademicYear NVARCHAR(5),
-		@NextYear NVARCHAR(5),
-        @DestinationYear NVARCHAR(5),
-        @CourseID int,
-	    @GroupID int';
-    
-    EXECUTE sp_executesql 
-        @SQLString, 
-        @SQLParams, 
-        @System = @System, 
-        @SystemILP = @SystemILP, 
-        @AcademicYear = @AcademicYear,
-		@NextYear = @NextYear, 
-        @DestinationYear = @DestinationYear, 
-        @CourseID = @CourseID,
-        @GroupID = @GroupID;
 END

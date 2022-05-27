@@ -37,7 +37,10 @@ namespace WLCProgressions
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(
-                    Configuration.GetConnectionString("DefaultConnection")));
+                    Configuration.GetConnectionString("DefaultConnection"),
+                        sqlServerOptions => sqlServerOptions.CommandTimeout(60)
+                )
+            );
             services.AddDatabaseDeveloperPageExceptionFilter();
             services.AddRazorPages();
 

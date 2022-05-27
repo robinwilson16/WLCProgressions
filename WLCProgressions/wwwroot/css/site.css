@@ -14,6 +14,19 @@ nav .NavLogo {
     margin-top: 20px;
 }
 
+#LoadingAnimation {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.LoadingArea {
+    padding: 20px;
+    font-size: 3em;
+    background-color: #eeeeee;
+    border: 1px solid #cccccc;
+    border-radius: 10px;
+    width: 300px;
+}
+
 .ChartLoading h1,
 .ChartPopupLoading h1 {
     text-align: center;
